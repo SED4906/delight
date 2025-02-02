@@ -1,0 +1,9 @@
+Delight (drop-in reimplementation of part of systemd)
+
+Delight is intended for low-RAM systems.  Development
+started because Wii Linux[1] is based on ArchPOWER so
+it uses systemd.  The Wii has little RAM available...
+
+"systemd on a machine with like 72 megs of available ram is one of the computing experiences ever"
+
+[1]: Wii Linux as in https://wii-linux.org/
