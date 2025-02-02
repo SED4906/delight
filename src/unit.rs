@@ -96,8 +96,11 @@ pub fn load_unit(name: &str) -> Result<(), ()> {
             if keyvalues.contains_key("ExecStart") {
                 for exec_start in keyvalues["ExecStart"].lines() {
                     println!("Trying process {exec_start}");
-                    process::Command::new(exec_start).spawn().or(Err(()))?;
-                    println!("Started process {exec_start}");
+                    let cmd = exec_start.split_whitespace().next();
+                    if let Some(cmd) = cmd {
+                        process::Command::new(cmd).args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>()).spawn().or(Err(()))?;
+                        println!("Started process {exec_start}");
+                    }
                 }
             }
         }
