@@ -55,6 +55,11 @@ pub fn load_unit(name: &str) -> Result<(), ()> {
     let unit_text = read_unit(name)?;
     let keyvalues = parse_unit(unit_text);
     let suffix = get_unit_suffix(name)?;
+    if keyvalues.contains_key("Requires") {
+        for wants_unit in keyvalues["Requires"].split_whitespace() {
+            load_unit(wants_unit)?;
+        }
+    }
     if keyvalues.contains_key("Wants") {
         for wants_unit in keyvalues["Wants"].split_whitespace() {
             let _ = load_unit(wants_unit);
