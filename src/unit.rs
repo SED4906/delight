@@ -50,6 +50,29 @@ fn get_unit_suffix(name: &str) -> Result<UnitSuffix,()> {
     }
 }
 
+pub fn load_units_wanted_by(name: &str) -> Result<(), ()> {
+    for unit_path in UNIT_PATHS {
+        let mut pathbuf = PathBuf::new();
+        pathbuf.push(unit_path);
+        let mut wants_dir = name.to_owned();
+        wants_dir.push_str(".wants");
+        pathbuf.push(wants_dir);
+        match std::fs::read_dir(pathbuf) {
+            Ok(result) => {
+                for entry in result {
+                    if let Ok(entry) = entry {
+                        if let Some(wants_name) = entry.file_name().to_str() {
+                            let _ = load_unit(wants_name);
+                        }
+                    }
+                }
+            }
+            Err(_) => {}
+        }
+    }
+    Ok(())
+}
+
 pub fn load_unit(name: &str) -> Result<(), ()> {
     println!("Loading unit {name}");
     let unit_text = read_unit(name)?;
@@ -66,6 +89,9 @@ pub fn load_unit(name: &str) -> Result<(), ()> {
         }
     }
     match suffix {
+        UnitSuffix::Target => {
+            let _ = load_units_wanted_by(name);
+        }
         UnitSuffix::Service => {
             if keyvalues.contains_key("ExecStart") {
                 for exec_start in keyvalues["ExecStart"].lines() {
@@ -75,7 +101,6 @@ pub fn load_unit(name: &str) -> Result<(), ()> {
                 }
             }
         }
-        _ => {}
     }
     Ok(())
 }
