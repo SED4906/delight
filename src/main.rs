@@ -15,6 +15,7 @@ fn main() {
     }
     set_current_dir(Path::new("/")).expect("Couldn't change directory to /");
     println!("Welcome!");
+    let _ = process::Command::new("mount").args(&["-t","tmpfs","-o","rw,nosuid,relatime,size=50%,nr_inodes=2m,mode=755,inode64","tmpfs", "/run"]).spawn();
     load_unit("default.target").expect("Couldn't load unit default.target");
     unsafe {
         block_signals();
