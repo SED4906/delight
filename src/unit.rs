@@ -1,9 +1,10 @@
-use std::{collections::BTreeMap, path::PathBuf, process};
+use std::{collections::BTreeMap, os::unix::net::UnixListener, path::PathBuf, process};
 
 enum UnitSuffix {
     Target,
     Service,
     Mount,
+    Socket,
 }
 
 const UNIT_PATHS: &[&str] = &[
@@ -48,6 +49,8 @@ fn get_unit_suffix(name: &str) -> Result<UnitSuffix,()> {
         Ok(UnitSuffix::Service)
     } else if name.ends_with(".mount") {
         Ok(UnitSuffix::Mount)
+    } else if name.ends_with(".socket") {
+        Ok(UnitSuffix::Socket)
     } else {
         Err(())
     }
@@ -103,6 +106,15 @@ pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn load_socket_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
+    if keyvalues.contains_key("ListenStream") {
+        if keyvalues["ListenStream"].starts_with("/") {
+            UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(()))?;
+        }
+    }
+    Ok(())
+}
+
 pub fn load_unit(name: &str) -> Result<(), ()> {
     println!("Loading unit {name}");
     let unit_text = read_unit(name)?;
@@ -127,6 +139,9 @@ pub fn load_unit(name: &str) -> Result<(), ()> {
         }
         UnitSuffix::Mount => {
             load_mount_unit(keyvalues)?;
+        }
+        UnitSuffix::Socket => {
+            load_socket_unit(keyvalues)?;
         }
     }
     Ok(())
