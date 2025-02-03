@@ -106,13 +106,13 @@ pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     Ok(())
 }
 
-pub fn load_socket_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
+pub fn load_socket_unit(keyvalues: BTreeMap<String, String>) -> Result<UnixListener, ()> {
     if keyvalues.contains_key("ListenStream") {
         if keyvalues["ListenStream"].starts_with("/") {
-            UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(()))?;
+            return Ok(UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(()))?);
         }
     }
-    Ok(())
+    Err(())
 }
 
 pub fn load_unit(name: &str) -> Result<(), ()> {
@@ -141,7 +141,7 @@ pub fn load_unit(name: &str) -> Result<(), ()> {
             load_mount_unit(keyvalues)?;
         }
         UnitSuffix::Socket => {
-            load_socket_unit(keyvalues)?;
+            let _ = load_socket_unit(keyvalues)?;
         }
     }
     Ok(())
