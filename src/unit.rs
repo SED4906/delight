@@ -31,10 +31,10 @@ fn parse_unit(unit_text: String) -> BTreeMap<String, String> {
                 if value.trim().is_empty() {
                     result.remove(key.trim());
                 } else {
-                    result.insert(key.trim().to_owned(), format!("{}\n{}", result[key.trim()], value.trim()).to_owned());
+                    result.insert(key.trim().to_owned(), format!("{}\n{}", result[key.trim()], value.trim().replace("%%", "%")).to_owned());
                 }
             } else {
-                result.insert(key.trim().to_owned(), value.trim().to_owned());
+                result.insert(key.trim().to_owned(), value.trim().replace("%%", "%").to_owned());
             }
         }
     }
