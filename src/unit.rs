@@ -3,6 +3,7 @@ use std::{collections::BTreeMap, path::PathBuf, process};
 enum UnitSuffix {
     Target,
     Service,
+    Mount,
 }
 
 const UNIT_PATHS: &[&str] = &[
@@ -45,6 +46,8 @@ fn get_unit_suffix(name: &str) -> Result<UnitSuffix,()> {
         Ok(UnitSuffix::Target)
     } else if name.ends_with(".service") {
         Ok(UnitSuffix::Service)
+    } else if name.ends_with(".mount") {
+        Ok(UnitSuffix::Mount)
     } else {
         Err(())
     }
@@ -73,14 +76,41 @@ pub fn load_units_wanted_by(name: &str) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn load_exec_start(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
+    if keyvalues.contains_key("ExecStart") {
+        for exec_start in keyvalues["ExecStart"].lines() {
+            println!("Trying process {exec_start}");
+            let cmd = exec_start.split_whitespace().next();
+            if let Some(cmd) = cmd {
+                process::Command::new(cmd).args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>()).spawn().or(Err(()))?;
+                println!("Started process {exec_start}");
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
+    if keyvalues.contains_key("What") && keyvalues.contains_key("Where") {
+        println!("Mounting {} to {}", keyvalues["What"], keyvalues["Where"]);
+        let mount_type = keyvalues.get("Type").unwrap_or(&"auto".to_owned()).clone();
+        if let Some(options) = keyvalues.get("Options") {
+            process::Command::new("mount").args(&["-t",mount_type.as_str(),"-o",options,keyvalues["What"].clone().as_str(), keyvalues["Where"].clone().as_str()]).spawn().or(Err(()))?;
+        } else {
+            process::Command::new("mount").args(&["-t",mount_type.as_str(),keyvalues["What"].clone().as_str(), keyvalues["Where"].clone().as_str()]).spawn().or(Err(()))?;
+        }
+    }
+    Ok(())
+}
+
 pub fn load_unit(name: &str) -> Result<(), ()> {
     println!("Loading unit {name}");
     let unit_text = read_unit(name)?;
     let keyvalues = parse_unit(unit_text);
     let suffix = get_unit_suffix(name)?;
     if keyvalues.contains_key("Requires") {
-        for wants_unit in keyvalues["Requires"].split_whitespace() {
-            load_unit(wants_unit)?;
+        for requires_unit in keyvalues["Requires"].split_whitespace() {
+            load_unit(requires_unit)?;
         }
     }
     if keyvalues.contains_key("Wants") {
@@ -93,16 +123,10 @@ pub fn load_unit(name: &str) -> Result<(), ()> {
             let _ = load_units_wanted_by(name);
         }
         UnitSuffix::Service => {
-            if keyvalues.contains_key("ExecStart") {
-                for exec_start in keyvalues["ExecStart"].lines() {
-                    println!("Trying process {exec_start}");
-                    let cmd = exec_start.split_whitespace().next();
-                    if let Some(cmd) = cmd {
-                        process::Command::new(cmd).args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>()).spawn().or(Err(()))?;
-                        println!("Started process {exec_start}");
-                    }
-                }
-            }
+            load_exec_start(keyvalues)?;
+        }
+        UnitSuffix::Mount => {
+            load_mount_unit(keyvalues)?;
         }
     }
     Ok(())
