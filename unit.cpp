@@ -1,4 +1,5 @@
 #include <cctype>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <stddef.h>
@@ -135,8 +136,13 @@ bool load_unit(const char *unit_name) {
   load_unit_requires(keyvalues);
   load_unit_wants(keyvalues);
   switch (suffix) {
-    case UNIT_SERVICE: {
-
+    case UNIT_TARGET: {
+      std::string wants_name(unit_name);
+      wants_name += ".wants";
+      std::string wants_path(find_unit_path(wants_name.c_str()));
+      for(auto entry : std::filesystem::directory_iterator(wants_path)) {
+        load_unit(entry.path().filename().c_str());
+      }
       break;
     };
     default: break;
