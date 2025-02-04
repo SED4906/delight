@@ -140,6 +140,7 @@ bool load_unit(const char *unit_name) {
       std::string wants_name(unit_name);
       wants_name += ".wants";
       std::string wants_path(find_unit_path(wants_name.c_str()));
+      if (!std::filesystem::exists(wants_path)) break;
       for(auto entry : std::filesystem::directory_iterator(wants_path)) {
         load_unit(entry.path().filename().c_str());
       }
