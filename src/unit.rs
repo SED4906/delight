@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::os::fd::AsRawFd;
 use std::os::unix::process::CommandExt;
+use std::path::Path;
 use std::{collections::BTreeMap, os::unix::net::UnixListener, path::PathBuf, process};
 
 enum UnitSuffix {
@@ -159,6 +160,7 @@ pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     if keyvalues.contains_key("What") && keyvalues.contains_key("Where") {
         println!("Mounting {} to {}", keyvalues["What"], keyvalues["Where"]);
         let mount_type = keyvalues.get("Type").unwrap_or(&"auto".to_owned()).clone();
+        std::fs::create_dir(Path::new(keyvalues["Where"].clone().as_str())).or(Err(()))?;
         if let Some(options) = keyvalues.get("Options") {
             process::Command::new("mount")
                 .args(&[
