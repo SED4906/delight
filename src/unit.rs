@@ -222,6 +222,13 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
             let _ = load_unit(wants_unit, active_units, false);
         }
     }
+    if keyvalues.contains_key("After") {
+        for after_unit in keyvalues["After"].split_whitespace() {
+            if !active_units.contains(after_unit) {
+                let _ = load_unit(after_unit, active_units, false);
+            }
+        }
+    }
     match suffix {
         UnitSuffix::Target => {
             let _ = load_units_wanted_by(name, active_units);
