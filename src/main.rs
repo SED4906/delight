@@ -17,7 +17,7 @@ fn main() {
     println!("Welcome!");
     let _ = process::Command::new("mount").args(&["-t","tmpfs","-o","rw,nosuid,relatime,size=50%,nr_inodes=2m,mode=755,inode64","tmpfs", "/run"]).spawn();
     let mut active_units = BTreeSet::new();
-    load_unit("default.target", &mut active_units).expect("Couldn't load unit default.target");
+    load_unit("default.target", &mut active_units, false).expect("Couldn't load unit default.target");
     unsafe {
         block_signals();
         loop {

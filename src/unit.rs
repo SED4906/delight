@@ -100,7 +100,7 @@ pub fn load_units_wanted_by(name: &str, active_units: &mut BTreeSet<String>) -> 
                 for entry in result {
                     if let Ok(entry) = entry {
                         if let Some(wants_name) = entry.file_name().to_str() {
-                            let _ = load_unit(wants_name, active_units);
+                            let _ = load_unit(wants_name, active_units, false);
                         }
                     }
                 }
@@ -201,7 +201,7 @@ pub enum UnitLoadInfo {
     Socket { fd: UnixListener },
 }
 
-pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>) -> Result<UnitLoadInfo, ()> {
+pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_unit: bool) -> Result<UnitLoadInfo, ()> {
     if active_units.contains(name) {
         return Ok(UnitLoadInfo::AlreadyActive);
     };
@@ -212,12 +212,12 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>) -> Result<Unit
     let suffix = get_unit_suffix(name)?;
     if keyvalues.contains_key("Requires") {
         for requires_unit in keyvalues["Requires"].split_whitespace() {
-            load_unit(requires_unit, active_units)?;
+            load_unit(requires_unit, active_units, false)?;
         }
     }
     if keyvalues.contains_key("Wants") {
         for wants_unit in keyvalues["Wants"].split_whitespace() {
-            let _ = load_unit(wants_unit, active_units);
+            let _ = load_unit(wants_unit, active_units, false);
         }
     }
     match suffix {
@@ -227,7 +227,7 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>) -> Result<Unit
         UnitSuffix::Service => {
             let mut socket_unit_name = name.strip_suffix(".service").unwrap().to_string();
             socket_unit_name.push_str(".socket");
-            if let Ok(UnitLoadInfo::Socket { fd }) = load_unit(name, active_units) {
+            if let Ok(UnitLoadInfo::Socket { fd }) = load_unit(name, active_units, true) {
                 load_service_unit_with_socket(keyvalues, fd)?;
             } else {
                 load_service_unit(keyvalues)?;
@@ -238,8 +238,14 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>) -> Result<Unit
         }
         UnitSuffix::Socket => {
             let fd = load_socket_unit(keyvalues)?;
-            active_units.insert(name.to_string());
-            return Ok(UnitLoadInfo::Socket { fd });
+            if is_sidecar_unit {
+                return Ok(UnitLoadInfo::Socket { fd });
+            } else {
+                let mut service_unit_name = name.strip_suffix(".socket").unwrap().to_string();
+                service_unit_name.push_str(".service");
+                active_units.remove(name);
+                load_unit(service_unit_name.as_str(), active_units, true)?;
+            }
         }
     }
     Ok(UnitLoadInfo::Other)
