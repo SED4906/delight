@@ -15,7 +15,11 @@ fn main() {
     }
     set_current_dir(Path::new("/")).expect("Couldn't change directory to /");
     println!("Welcome!");
-    let _ = process::Command::new("mount").args(&["-t","tmpfs","-o","rw,nosuid,relatime,size=50%,nr_inodes=2m,mode=755,inode64","tmpfs", "/run"]).spawn();
+    let _ = process::Command::new("mount").args(&["-t","tmpfs","-o","rw,nosuid,relatime,size=50%,nr_inodes=1m,inode64","tmpfs", "/tmp"]).spawn();
+    let _ = process::Command::new("mount").args(&["-t","tmpfs","-o","rw,nosuid,relatime,mode=755,inode64","tmpfs", "/run"]).spawn();
+    let _ = process::Command::new("mount").args(&["-t","proc","-o","rw,nosuid,nodev,noexec,relatime","proc", "/proc"]).spawn();
+    let _ = process::Command::new("mount").args(&["-t","devtmpfs","-o","rw,nosuid,nodev,noexec,relatime","dev", "/dev"]).spawn();
+    let _ = process::Command::new("mount").args(&["-t","sysfs","-o","rw,nosuid,nodev,noexec,relatime","sys", "/sys"]).spawn();
     let mut active_units = BTreeSet::new();
     load_unit("default.target", &mut active_units, false).expect("Couldn't load unit default.target");
     unsafe {
