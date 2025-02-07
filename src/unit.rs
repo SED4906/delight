@@ -227,7 +227,7 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
         UnitSuffix::Service => {
             let mut socket_unit_name = name.strip_suffix(".service").unwrap().to_string();
             socket_unit_name.push_str(".socket");
-            if let Ok(UnitLoadInfo::Socket { fd }) = load_unit(name, active_units, true) {
+            if let Ok(UnitLoadInfo::Socket { fd }) = load_unit(socket_unit_name.as_str(), active_units, true) {
                 load_service_unit_with_socket(keyvalues, fd)?;
             } else {
                 load_service_unit(keyvalues)?;
@@ -237,8 +237,8 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
             load_mount_unit(keyvalues)?;
         }
         UnitSuffix::Socket => {
-            let fd = load_socket_unit(keyvalues)?;
             if is_sidecar_unit {
+                let fd = load_socket_unit(keyvalues)?;
                 return Ok(UnitLoadInfo::Socket { fd });
             } else {
                 let mut service_unit_name = name.strip_suffix(".socket").unwrap().to_string();
