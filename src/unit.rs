@@ -1,3 +1,5 @@
+use std::os::fd::AsRawFd;
+use std::os::unix::process::CommandExt;
 use std::{collections::BTreeMap, os::unix::net::UnixListener, path::PathBuf, process};
 
 enum UnitSuffix {
@@ -7,11 +9,9 @@ enum UnitSuffix {
     Socket,
 }
 
-const UNIT_PATHS: &[&str] = &[
-    "/usr/lib/systemd/system/",
-];
+const UNIT_PATHS: &[&str] = &["/usr/lib/systemd/system/"];
 
-fn read_unit(name: &str) -> Result<String,()> {
+fn read_unit(name: &str) -> Result<String, ()> {
     for unit_path in UNIT_PATHS {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(unit_path);
@@ -26,23 +26,54 @@ fn read_unit(name: &str) -> Result<String,()> {
 
 fn parse_unit(unit_text: String) -> BTreeMap<String, String> {
     let mut result = BTreeMap::new();
+    let mut working_lines = vec![];
+    let mut working_line = String::new();
+    let mut line_continues;
     for line in unit_text.lines() {
+        if line.ends_with("\\") {
+            line_continues = true;
+            let line = line.strip_suffix("\\").unwrap_or(line);
+            working_line.push_str(line);
+            working_line.push(' ');
+        } else if line.starts_with("#") || line.starts_with(";") {
+            line_continues = true;
+        } else {
+            working_line.push_str(line);
+            line_continues = false;
+        }
+        if !line_continues {
+            working_lines.push(working_line);
+            working_line = String::new();
+        }
+    }
+    for line in working_lines.iter() {
         if let Some((key, value)) = line.split_once("=") {
             if result.contains_key(key.trim()) {
                 if value.trim().is_empty() {
                     result.remove(key.trim());
                 } else {
-                    result.insert(key.trim().to_owned(), format!("{}\n{}", result[key.trim()], value.trim().replace("%%", "%")).to_owned());
+                    result.insert(
+                        key.trim().to_owned(),
+                        format!(
+                            "{}\n{}",
+                            result[key.trim()],
+                            value.trim().replace("%%", "%")
+                        )
+                        .to_owned(),
+                    );
                 }
             } else {
-                result.insert(key.trim().to_owned(), value.trim().replace("%%", "%").to_owned());
+                result.insert(
+                    key.trim().to_owned(),
+                    value.trim().replace("%%", "%").to_owned(),
+                );
             }
         }
     }
     return result;
 }
 
-fn get_unit_suffix(name: &str) -> Result<UnitSuffix,()> {
+fn get_unit_suffix(name: &str) -> Result<UnitSuffix, ()> {
     if name.ends_with(".target") {
         Ok(UnitSuffix::Target)
     } else if name.ends_with(".service") {
@@ -79,13 +110,43 @@ pub fn load_units_wanted_by(name: &str) -> Result<(), ()> {
     Ok(())
 }
 
-pub fn load_exec_start(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
+pub fn load_service_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     if keyvalues.contains_key("ExecStart") {
         for exec_start in keyvalues["ExecStart"].lines() {
             println!("Trying process {exec_start}");
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
-                process::Command::new(cmd).args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>()).spawn().or(Err(()))?;
+                process::Command::new(cmd)
+                    .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
+                    .spawn()
+                    .or(Err(()))?;
+                println!("Started process {exec_start}");
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn load_service_unit_with_socket(
+    keyvalues: BTreeMap<String, String>,
+    fd: UnixListener,
+) -> Result<(), ()> {
+    if keyvalues.contains_key("ExecStart") {
+        if let Some(exec_start) = keyvalues["ExecStart"].lines().next() {
+            println!("Trying process {exec_start}");
+            let cmd = exec_start.split_whitespace().next();
+            if let Some(cmd) = cmd {
+                unsafe {
+                    process::Command::new(cmd)
+                    .pre_exec(move || {
+                        std::env::set_var("LISTEN_PID", process::id().to_string());
+                        std::env::set_var("LISTEN_FDS", fd.as_raw_fd().to_string());
+                        Ok(())
+                    })
+                    .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
+                    .spawn()
+                    .or(Err(()))?;
+                }
                 println!("Started process {exec_start}");
             }
         }
@@ -98,9 +159,27 @@ pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
         println!("Mounting {} to {}", keyvalues["What"], keyvalues["Where"]);
         let mount_type = keyvalues.get("Type").unwrap_or(&"auto".to_owned()).clone();
         if let Some(options) = keyvalues.get("Options") {
-            process::Command::new("mount").args(&["-t",mount_type.as_str(),"-o",options,keyvalues["What"].clone().as_str(), keyvalues["Where"].clone().as_str()]).spawn().or(Err(()))?;
+            process::Command::new("mount")
+                .args(&[
+                    "-t",
+                    mount_type.as_str(),
+                    "-o",
+                    options,
+                    keyvalues["What"].clone().as_str(),
+                    keyvalues["Where"].clone().as_str(),
+                ])
+                .spawn()
+                .or(Err(()))?;
         } else {
-            process::Command::new("mount").args(&["-t",mount_type.as_str(),keyvalues["What"].clone().as_str(), keyvalues["Where"].clone().as_str()]).spawn().or(Err(()))?;
+            process::Command::new("mount")
+                .args(&[
+                    "-t",
+                    mount_type.as_str(),
+                    keyvalues["What"].clone().as_str(),
+                    keyvalues["Where"].clone().as_str(),
+                ])
+                .spawn()
+                .or(Err(()))?;
         }
     }
     Ok(())
@@ -115,7 +194,12 @@ pub fn load_socket_unit(keyvalues: BTreeMap<String, String>) -> Result<UnixListe
     Err(())
 }
 
-pub fn load_unit(name: &str) -> Result<(), ()> {
+pub enum UnitLoadInfo {
+    Other,
+    Socket { fd: UnixListener },
+}
+
+pub fn load_unit(name: &str) -> Result<UnitLoadInfo, ()> {
     println!("Loading unit {name}");
     let unit_text = read_unit(name)?;
     let keyvalues = parse_unit(unit_text);
@@ -135,14 +219,21 @@ pub fn load_unit(name: &str) -> Result<(), ()> {
             let _ = load_units_wanted_by(name);
         }
         UnitSuffix::Service => {
-            load_exec_start(keyvalues)?;
+            let mut socket_unit_name = name.strip_suffix(".service").unwrap().to_string();
+            socket_unit_name.push_str(".socket");
+            if let Ok(UnitLoadInfo::Socket { fd }) = load_unit(name) {
+                load_service_unit_with_socket(keyvalues, fd)?;
+            } else {
+                load_service_unit(keyvalues)?;
+            }
         }
         UnitSuffix::Mount => {
             load_mount_unit(keyvalues)?;
         }
         UnitSuffix::Socket => {
-            let _ = load_socket_unit(keyvalues)?;
+            let fd = load_socket_unit(keyvalues)?;
+            return Ok(UnitLoadInfo::Socket { fd });
         }
     }
-    Ok(())
+    Ok(UnitLoadInfo::Other)
 }
