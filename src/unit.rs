@@ -205,6 +205,7 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>) -> Result<Unit
     if active_units.contains(name) {
         return Ok(UnitLoadInfo::AlreadyActive);
     };
+    active_units.insert(name.to_string());
     println!("Loading unit {name}");
     let unit_text = read_unit(name)?;
     let keyvalues = parse_unit(unit_text);
@@ -241,6 +242,5 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>) -> Result<Unit
             return Ok(UnitLoadInfo::Socket { fd });
         }
     }
-    active_units.insert(name.to_string());
     Ok(UnitLoadInfo::Other)
 }
