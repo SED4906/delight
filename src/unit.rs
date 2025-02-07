@@ -114,14 +114,14 @@ pub fn load_units_wanted_by(name: &str, active_units: &mut BTreeSet<String>) -> 
 pub fn load_service_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     if keyvalues.contains_key("ExecStart") {
         for exec_start in keyvalues["ExecStart"].lines() {
-            println!("Trying process {exec_start}");
+            //println!("Trying process {exec_start}");
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 process::Command::new(cmd)
                     .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
                     .spawn()
                     .or(Err(()))?;
-                println!("Started process {exec_start}");
+                //println!("Started process {exec_start}");
             }
         }
     }
@@ -134,7 +134,7 @@ pub fn load_service_unit_with_socket(
 ) -> Result<(), ()> {
     if keyvalues.contains_key("ExecStart") {
         if let Some(exec_start) = keyvalues["ExecStart"].lines().next() {
-            println!("Trying process {exec_start}");
+            //println!("Trying process {exec_start}");
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 unsafe {
@@ -148,7 +148,7 @@ pub fn load_service_unit_with_socket(
                     .spawn()
                     .or(Err(()))?;
                 }
-                println!("Started process {exec_start}");
+                //println!("Started process {exec_start}");
             }
         }
     }
@@ -206,7 +206,7 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
         return Ok(UnitLoadInfo::AlreadyActive);
     };
     active_units.insert(name.to_string());
-    println!("Loading unit {name}");
+    print!("-- Loading unit {name} --");
     let unit_text = read_unit(name)?;
     let keyvalues = parse_unit(unit_text);
     let suffix = get_unit_suffix(name)?;
