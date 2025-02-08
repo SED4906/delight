@@ -13,7 +13,7 @@ enum UnitSuffix {
 
 const UNIT_PATHS: &[&str] = &["/usr/lib/delight/system/", "/usr/lib/systemd/system/"];
 
-fn read_unit(name: &str) -> Result<String, ()> {
+fn read_unit(name: &str) -> Result<String, UnitLoadError> {
     for unit_path in UNIT_PATHS {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(unit_path);
@@ -23,7 +23,7 @@ fn read_unit(name: &str) -> Result<String, ()> {
             Err(_) => {}
         }
     }
-    Err(())
+    Err(UnitLoadError::DoesNotExist)
 }
 
 fn parse_unit(unit_text: String, template: String) -> BTreeMap<String, String> {
@@ -84,7 +84,7 @@ fn parse_unit(unit_text: String, template: String) -> BTreeMap<String, String> {
     return result;
 }
 
-fn get_unit_suffix(name: &str) -> Result<UnitSuffix, ()> {
+fn get_unit_suffix(name: &str) -> Result<UnitSuffix, UnitLoadError> {
     if name.ends_with(".target") {
         Ok(UnitSuffix::Target)
     } else if name.ends_with(".service") {
@@ -94,11 +94,11 @@ fn get_unit_suffix(name: &str) -> Result<UnitSuffix, ()> {
     } else if name.ends_with(".socket") {
         Ok(UnitSuffix::Socket)
     } else {
-        Err(())
+        Err(UnitLoadError::Failed)
     }
 }
 
-pub fn load_units_wanted_by(name: &str, active_units: &mut BTreeSet<String>) -> Result<(), ()> {
+pub fn load_units_wanted_by(name: &str, active_units: &mut BTreeSet<String>) -> Result<(), UnitLoadError> {
     for unit_path in UNIT_PATHS {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(unit_path);
@@ -121,7 +121,7 @@ pub fn load_units_wanted_by(name: &str, active_units: &mut BTreeSet<String>) -> 
     Ok(())
 }
 
-pub fn load_service_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
+pub fn load_service_unit(keyvalues: BTreeMap<String, String>) -> Result<(), UnitLoadError> {
     if keyvalues.contains_key("ExecStart") {
         for exec_start in keyvalues["ExecStart"].lines() {
             //println!("Trying process {exec_start}");
@@ -130,7 +130,7 @@ pub fn load_service_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> 
                 process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                     .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
                     .spawn()
-                    .or(Err(()))?;
+                    .or(Err(UnitLoadError::Failed))?;
             }
         }
     }
@@ -140,7 +140,7 @@ pub fn load_service_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> 
 pub fn load_service_unit_with_socket(
     keyvalues: BTreeMap<String, String>,
     fd: UnixListener,
-) -> Result<(), ()> {
+) -> Result<(), UnitLoadError> {
     if keyvalues.contains_key("ExecStart") {
         if let Some(exec_start) = keyvalues["ExecStart"].lines().next() {
             let cmd = exec_start.split_whitespace().next();
@@ -154,7 +154,7 @@ pub fn load_service_unit_with_socket(
                         })
                         .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
                         .spawn()
-                        .or(Err(()))?;
+                        .or(Err(UnitLoadError::Failed))?;
                 }
             }
         }
@@ -162,10 +162,10 @@ pub fn load_service_unit_with_socket(
     Ok(())
 }
 
-pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
+pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), UnitLoadError> {
     if keyvalues.contains_key("What") && keyvalues.contains_key("Where") {
         let mount_type = keyvalues.get("Type").unwrap_or(&"auto".to_owned()).clone();
-        std::fs::create_dir(Path::new(keyvalues["Where"].clone().as_str())).or(Err(()))?;
+        std::fs::create_dir(Path::new(keyvalues["Where"].clone().as_str())).or(Err(UnitLoadError::Failed))?;
         if let Some(options) = keyvalues.get("Options") {
             process::Command::new("mount")
                 .args(&[
@@ -177,7 +177,7 @@ pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
                     keyvalues["Where"].clone().as_str(),
                 ])
                 .spawn()
-                .or(Err(()))?;
+                .or(Err(UnitLoadError::Failed))?;
         } else {
             process::Command::new("mount")
                 .args(&[
@@ -187,22 +187,22 @@ pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
                     keyvalues["Where"].clone().as_str(),
                 ])
                 .spawn()
-                .or(Err(()))?;
+                .or(Err(UnitLoadError::Failed))?;
         }
     }
     Ok(())
 }
 
-pub fn load_socket_unit(keyvalues: BTreeMap<String, String>) -> Result<UnixListener, ()> {
+pub fn load_socket_unit(keyvalues: BTreeMap<String, String>) -> Result<UnixListener, UnitLoadError> {
     if keyvalues.contains_key("ListenStream") {
         if keyvalues["ListenStream"].starts_with("/") {
             if let Some(dir_path) = Path::new(keyvalues["ListenStream"].clone().as_str()).parent() {
-                std::fs::create_dir_all(dir_path).or(Err(()))?;
-                return Ok(UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(()))?);
+                std::fs::create_dir_all(dir_path).or(Err(UnitLoadError::Failed))?;
+                return Ok(UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(UnitLoadError::Failed))?);
             }
         }
     }
-    Err(())
+    Err(UnitLoadError::Failed)
 }
 
 pub enum UnitLoadInfo {
@@ -211,11 +211,17 @@ pub enum UnitLoadInfo {
     Socket { fd: UnixListener },
 }
 
+#[derive(Debug)]
+pub enum UnitLoadError {
+    Failed,
+    DoesNotExist,
+}
+
 pub fn load_unit(
     name: &str,
     active_units: &mut BTreeSet<String>,
     is_sidecar_unit: bool,
-) -> Result<UnitLoadInfo, ()> {
+) -> Result<UnitLoadInfo, UnitLoadError> {
     if active_units.contains(name) {
         return Ok(UnitLoadInfo::AlreadyActive);
     };
@@ -252,12 +258,15 @@ pub fn load_unit(
         UnitSuffix::Service => {
             let mut socket_unit_name = file_name.strip_suffix(".service").unwrap().to_string();
             socket_unit_name.push_str(".socket");
-            if let Ok(UnitLoadInfo::Socket { fd }) =
-                load_unit(socket_unit_name.as_str(), active_units, true)
-            {
-                load_service_unit_with_socket(keyvalues, fd)?;
-            } else {
-                load_service_unit(keyvalues)?;
+            let socket_result = load_unit(socket_unit_name.as_str(), active_units, true);
+            match socket_result {
+                Ok(UnitLoadInfo::Socket { fd }) => {
+                    load_service_unit_with_socket(keyvalues, fd)?;
+                },
+                Err(UnitLoadError::DoesNotExist) => {
+                    load_service_unit(keyvalues)?;
+                },
+                _ => {return Err(UnitLoadError::Failed)}
             }
         }
         UnitSuffix::Mount => {
