@@ -196,7 +196,10 @@ pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
 pub fn load_socket_unit(keyvalues: BTreeMap<String, String>) -> Result<UnixListener, ()> {
     if keyvalues.contains_key("ListenStream") {
         if keyvalues["ListenStream"].starts_with("/") {
-            return Ok(UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(()))?);
+            if let Some(dir_path) = Path::new(keyvalues["ListenStream"].clone().as_str()).parent() {
+                std::fs::create_dir_all(dir_path).or(Err(()))?;
+                return Ok(UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(()))?);
+            }
         }
     }
     Err(())
