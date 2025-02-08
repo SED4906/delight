@@ -25,6 +25,7 @@ fn main() {
         println!("Something in default.target failed that bubbled up to it");
         println!("...Oh well...");
     }
+    println!("Attempting to start getty...");
     if load_unit("getty@tty1.service", &mut active_units, false).is_err() {
         println!("Couldn't start getty@tty1.service");
         println!("...Oh well...");
