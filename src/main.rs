@@ -22,6 +22,10 @@ fn main() {
     let _ = process::Command::new("mount").args(&["-t","sysfs","-o","rw,nosuid,nodev,noexec,relatime","sys", "/sys"]).spawn();
     let mut active_units = BTreeSet::new();
     load_unit("default.target", &mut active_units, false).expect("Couldn't load unit default.target");
+    if load_unit("getty@tty1.service", &mut active_units, false).is_err() {
+        println!("Couldn't start getty@tty1.service");
+        println!("...Oh well...");
+    }
     unsafe {
         block_signals();
         loop {
