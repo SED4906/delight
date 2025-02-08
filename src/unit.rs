@@ -26,7 +26,7 @@ fn read_unit(name: &str) -> Result<String, ()> {
     Err(())
 }
 
-fn parse_unit(unit_text: String) -> BTreeMap<String, String> {
+fn parse_unit(unit_text: String, template: String) -> BTreeMap<String, String> {
     let mut result = BTreeMap::new();
     let mut working_lines = vec![];
     let mut working_line = String::new();
@@ -59,7 +59,7 @@ fn parse_unit(unit_text: String) -> BTreeMap<String, String> {
                         format!(
                             "{}\n{}",
                             result[key.trim()],
-                            value.trim().replace("%%", "%")
+                            value.trim().replace("%i", template.as_str()).replace("%%", "%")
                         )
                         .to_owned(),
                     );
@@ -67,7 +67,7 @@ fn parse_unit(unit_text: String) -> BTreeMap<String, String> {
             } else {
                 result.insert(
                     key.trim().to_owned(),
-                    value.trim().replace("%%", "%").to_owned(),
+                    value.trim().replace("%i", template.as_str()).replace("%%", "%").to_owned(),
                 );
             }
         }
@@ -208,9 +208,17 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
         return Ok(UnitLoadInfo::AlreadyActive);
     };
     active_units.insert(name.to_string());
-    print!("-- Loading unit {name} --");
-    let unit_text = read_unit(name)?;
-    let keyvalues = parse_unit(unit_text);
+    println!("Loading unit {name}");
+    let (file_name,template) = name.rsplit_once("@").and_then(|(name, template)| {
+        let mut name = name.to_string();
+        name.push('@');
+        let (template,suffix) = template.rsplit_once(".").unwrap();
+        name.push_str(suffix);
+        Some((name.clone(), template.strip_prefix("@").unwrap()))
+
+    }).unwrap_or((name.to_string(), ""));
+    let unit_text = read_unit(file_name.as_str())?;
+    let keyvalues = parse_unit(unit_text, template.to_string());
     let suffix = get_unit_suffix(name)?;
     if keyvalues.contains_key("Requires") {
         for requires_unit in keyvalues["Requires"].split_whitespace() {
@@ -222,19 +230,12 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
             let _ = load_unit(wants_unit, active_units, false);
         }
     }
-    if keyvalues.contains_key("After") {
-        for after_unit in keyvalues["After"].split_whitespace() {
-            if !active_units.contains(after_unit) {
-                let _ = load_unit(after_unit, active_units, false);
-            }
-        }
-    }
     match suffix {
         UnitSuffix::Target => {
             let _ = load_units_wanted_by(name, active_units);
         }
         UnitSuffix::Service => {
-            let mut socket_unit_name = name.strip_suffix(".service").unwrap().to_string();
+            let mut socket_unit_name = file_name.strip_suffix(".service").unwrap().to_string();
             socket_unit_name.push_str(".socket");
             if let Ok(UnitLoadInfo::Socket { fd }) = load_unit(socket_unit_name.as_str(), active_units, true) {
                 load_service_unit_with_socket(keyvalues, fd)?;
@@ -250,7 +251,7 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
                 let fd = load_socket_unit(keyvalues)?;
                 return Ok(UnitLoadInfo::Socket { fd });
             } else {
-                let mut service_unit_name = name.strip_suffix(".socket").unwrap().to_string();
+                let mut service_unit_name = file_name.strip_suffix(".socket").unwrap().to_string();
                 service_unit_name.push_str(".service");
                 active_units.remove(name);
                 load_unit(service_unit_name.as_str(), active_units, true)?;
