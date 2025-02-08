@@ -115,14 +115,14 @@ pub fn load_units_wanted_by(name: &str, active_units: &mut BTreeSet<String>) -> 
 pub fn load_service_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     if keyvalues.contains_key("ExecStart") {
         for exec_start in keyvalues["ExecStart"].lines() {
-            println!("Trying process {exec_start}");
+            //println!("Trying process {exec_start}");
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                     .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
                     .spawn()
                     .or(Err(()))?;
-                println!("Started process {exec_start}");
+                //println!("Started process {exec_start}");
             }
         }
     }
@@ -135,7 +135,7 @@ pub fn load_service_unit_with_socket(
 ) -> Result<(), ()> {
     if keyvalues.contains_key("ExecStart") {
         if let Some(exec_start) = keyvalues["ExecStart"].lines().next() {
-            println!("Trying process {exec_start}");
+            //println!("Trying process {exec_start}");
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 unsafe {
@@ -149,7 +149,7 @@ pub fn load_service_unit_with_socket(
                     .spawn()
                     .or(Err(()))?;
                 }
-                println!("Started process {exec_start}");
+                //println!("Started process {exec_start}");
             }
         }
     }
@@ -158,7 +158,7 @@ pub fn load_service_unit_with_socket(
 
 pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     if keyvalues.contains_key("What") && keyvalues.contains_key("Where") {
-        println!("Mounting {} to {}", keyvalues["What"], keyvalues["Where"]);
+        //println!("Mounting {} to {}", keyvalues["What"], keyvalues["Where"]);
         let mount_type = keyvalues.get("Type").unwrap_or(&"auto".to_owned()).clone();
         std::fs::create_dir(Path::new(keyvalues["Where"].clone().as_str())).or(Err(()))?;
         if let Some(options) = keyvalues.get("Options") {
@@ -208,7 +208,7 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
         return Ok(UnitLoadInfo::AlreadyActive);
     };
     active_units.insert(name.to_string());
-    println!("Loading unit {name}");
+    //println!("Loading unit {name}");
     let (file_name,template) = name.rsplit_once("@").and_then(|(name, template)| {
         let mut name = name.to_string();
         name.push('@');
