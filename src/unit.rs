@@ -218,6 +218,7 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
         Some((name.clone(), template))
 
     }).unwrap_or((name.to_string(), ""));
+    println!("file name {file_name} template {template}");
     let unit_text = read_unit(file_name.as_str())?;
     let keyvalues = parse_unit(unit_text, template.to_string());
     let suffix = get_unit_suffix(name)?;
