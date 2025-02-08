@@ -213,8 +213,9 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
         let mut name = name.to_string();
         name.push('@');
         let (template,suffix) = template.rsplit_once(".").unwrap();
+        name.push('.');
         name.push_str(suffix);
-        Some((name.clone(), template.strip_prefix("@").unwrap()))
+        Some((name.clone(), template))
 
     }).unwrap_or((name.to_string(), ""));
     let unit_text = read_unit(file_name.as_str())?;
