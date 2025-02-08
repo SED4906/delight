@@ -59,7 +59,7 @@ fn parse_unit(unit_text: String, template: String) -> BTreeMap<String, String> {
                         format!(
                             "{}\n{}",
                             result[key.trim()],
-                            value.trim().replace("%i", template.as_str()).replace("%%", "%")
+                            value.trim().replace("%i", template.as_str()).replace("%I", template.as_str()).replace("%%", "%")
                         )
                         .to_owned(),
                     );
@@ -67,7 +67,7 @@ fn parse_unit(unit_text: String, template: String) -> BTreeMap<String, String> {
             } else {
                 result.insert(
                     key.trim().to_owned(),
-                    value.trim().replace("%i", template.as_str()).replace("%%", "%").to_owned(),
+                    value.trim().replace("%i", template.as_str()).replace("%I", template.as_str()).replace("%%", "%").to_owned(),
                 );
             }
         }
