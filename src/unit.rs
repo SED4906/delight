@@ -11,7 +11,7 @@ enum UnitSuffix {
     Socket,
 }
 
-const UNIT_PATHS: &[&str] = &["/usr/lib/systemd/system/"];
+const UNIT_PATHS: &[&str] = &["/usr/lib/delight/system/", "/usr/lib/systemd/system/"];
 
 fn read_unit(name: &str) -> Result<String, ()> {
     for unit_path in UNIT_PATHS {
@@ -59,7 +59,11 @@ fn parse_unit(unit_text: String, template: String) -> BTreeMap<String, String> {
                         format!(
                             "{}\n{}",
                             result[key.trim()],
-                            value.trim().replace("%i", template.as_str()).replace("%I", template.as_str()).replace("%%", "%")
+                            value
+                                .trim()
+                                .replace("%i", template.as_str())
+                                .replace("%I", template.as_str())
+                                .replace("%%", "%")
                         )
                         .to_owned(),
                     );
@@ -67,7 +71,12 @@ fn parse_unit(unit_text: String, template: String) -> BTreeMap<String, String> {
             } else {
                 result.insert(
                     key.trim().to_owned(),
-                    value.trim().replace("%i", template.as_str()).replace("%I", template.as_str()).replace("%%", "%").to_owned(),
+                    value
+                        .trim()
+                        .replace("%i", template.as_str())
+                        .replace("%I", template.as_str())
+                        .replace("%%", "%")
+                        .to_owned(),
                 );
             }
         }
@@ -115,14 +124,13 @@ pub fn load_units_wanted_by(name: &str, active_units: &mut BTreeSet<String>) -> 
 pub fn load_service_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     if keyvalues.contains_key("ExecStart") {
         for exec_start in keyvalues["ExecStart"].lines() {
-            println!("Trying process {exec_start}");
+            //println!("Trying process {exec_start}");
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                     .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
                     .spawn()
                     .or(Err(()))?;
-                println!("Started process {exec_start}");
             }
         }
     }
@@ -135,21 +143,19 @@ pub fn load_service_unit_with_socket(
 ) -> Result<(), ()> {
     if keyvalues.contains_key("ExecStart") {
         if let Some(exec_start) = keyvalues["ExecStart"].lines().next() {
-            println!("Trying process {exec_start}");
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 unsafe {
                     process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
-                    .pre_exec(move || {
-                        std::env::set_var("LISTEN_PID", process::id().to_string());
-                        std::env::set_var("LISTEN_FDS", fd.as_raw_fd().to_string());
-                        Ok(())
-                    })
-                    .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
-                    .spawn()
-                    .or(Err(()))?;
+                        .pre_exec(move || {
+                            std::env::set_var("LISTEN_PID", process::id().to_string());
+                            std::env::set_var("LISTEN_FDS", fd.as_raw_fd().to_string());
+                            Ok(())
+                        })
+                        .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
+                        .spawn()
+                        .or(Err(()))?;
                 }
-                println!("Started process {exec_start}");
             }
         }
     }
@@ -158,7 +164,6 @@ pub fn load_service_unit_with_socket(
 
 pub fn load_mount_unit(keyvalues: BTreeMap<String, String>) -> Result<(), ()> {
     if keyvalues.contains_key("What") && keyvalues.contains_key("Where") {
-        println!("Mounting {} to {}", keyvalues["What"], keyvalues["Where"]);
         let mount_type = keyvalues.get("Type").unwrap_or(&"auto".to_owned()).clone();
         std::fs::create_dir(Path::new(keyvalues["Where"].clone().as_str())).or(Err(()))?;
         if let Some(options) = keyvalues.get("Options") {
@@ -203,21 +208,27 @@ pub enum UnitLoadInfo {
     Socket { fd: UnixListener },
 }
 
-pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_unit: bool) -> Result<UnitLoadInfo, ()> {
+pub fn load_unit(
+    name: &str,
+    active_units: &mut BTreeSet<String>,
+    is_sidecar_unit: bool,
+) -> Result<UnitLoadInfo, ()> {
     if active_units.contains(name) {
         return Ok(UnitLoadInfo::AlreadyActive);
     };
     active_units.insert(name.to_string());
-    println!("Loading unit {name}");
-    let (file_name,template) = name.rsplit_once("@").and_then(|(name, template)| {
-        let mut name = name.to_string();
-        name.push('@');
-        let (template,suffix) = template.rsplit_once(".").unwrap();
-        name.push('.');
-        name.push_str(suffix);
-        Some((name.clone(), template))
-
-    }).unwrap_or((name.to_string(), ""));
+    print!("{name} ");
+    let (file_name, template) = name
+        .rsplit_once("@")
+        .and_then(|(name, template)| {
+            let mut name = name.to_string();
+            name.push('@');
+            let (template, suffix) = template.rsplit_once(".").unwrap();
+            name.push('.');
+            name.push_str(suffix);
+            Some((name.clone(), template))
+        })
+        .unwrap_or((name.to_string(), ""));
     let unit_text = read_unit(file_name.as_str())?;
     let keyvalues = parse_unit(unit_text, template.to_string());
     let suffix = get_unit_suffix(name)?;
@@ -238,7 +249,9 @@ pub fn load_unit(name: &str, active_units: &mut BTreeSet<String>, is_sidecar_uni
         UnitSuffix::Service => {
             let mut socket_unit_name = file_name.strip_suffix(".service").unwrap().to_string();
             socket_unit_name.push_str(".socket");
-            if let Ok(UnitLoadInfo::Socket { fd }) = load_unit(socket_unit_name.as_str(), active_units, true) {
+            if let Ok(UnitLoadInfo::Socket { fd }) =
+                load_unit(socket_unit_name.as_str(), active_units, true)
+            {
                 load_service_unit_with_socket(keyvalues, fd)?;
             } else {
                 load_service_unit(keyvalues)?;

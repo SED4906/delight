@@ -15,21 +15,12 @@ fn main() {
     }
     set_current_dir(Path::new("/")).expect("Couldn't change directory to /");
     println!("Welcome!");
-    let _ = process::Command::new("mount").args(&["-t","tmpfs","-o","rw,nosuid,relatime,size=50%,nr_inodes=1m,inode64","tmpfs", "/tmp"]).spawn();
     let _ = process::Command::new("mount").args(&["-t","tmpfs","-o","rw,nosuid,relatime,mode=755,inode64","tmpfs", "/run"]).spawn();
     let _ = process::Command::new("mount").args(&["-t","proc","-o","rw,nosuid,nodev,noexec,relatime","proc", "/proc"]).spawn();
     let _ = process::Command::new("mount").args(&["-t","devtmpfs","-o","rw,nosuid,relatime,size=50%,mode=755,nr_inodes=2m,inode64","dev", "/dev"]).spawn();
     let _ = process::Command::new("mount").args(&["-t","sysfs","-o","rw,nosuid,nodev,noexec,relatime","sys", "/sys"]).spawn();
     let mut active_units = BTreeSet::new();
-    if load_unit("default.target", &mut active_units, false).is_err() {
-        println!("Something in default.target failed that bubbled up to it");
-        println!("...Oh well...");
-    }
-    println!("Attempting to start getty...");
-    if load_unit("getty@tty1.service", &mut active_units, false).is_err() {
-        println!("Couldn't start getty@tty1.service");
-        println!("...Oh well...");
-    }
+    let _ = load_unit("default.target", &mut active_units, false);
     unsafe {
         block_signals();
         loop {
