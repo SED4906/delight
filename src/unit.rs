@@ -254,7 +254,7 @@ pub fn activate_unit(
     checked_units: &mut BTreeSet<String>,
     success_units: &mut BTreeSet<String>
 ) -> Result<(), UnitLoadError> {
-    if checked_units.contains(name) {
+    if checked_units.contains(name) || success_units.contains(name) {
         return Ok(());
     }
     checked_units.insert(name.to_owned());
@@ -276,6 +276,10 @@ pub fn activate_unit(
         for wants_unit in unit.keyvalues["Wants"].split_whitespace() {
             let _ = activate_unit(wants_unit, checked_units, success_units);
         }
+    }
+
+    if success_units.contains(name) {
+        return Ok(());
     }
     match unit.suffix {
         UnitSuffix::Target => {
