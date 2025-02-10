@@ -4,7 +4,7 @@ use std::os::fd::AsRawFd;
 use std::os::unix::net::UnixDatagram;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
-use std::process;
+use std::process::{self, Stdio};
 use std::{collections::BTreeMap, os::unix::net::UnixListener, path::PathBuf};
 
 enum UnitSuffix {
@@ -181,6 +181,7 @@ pub fn activate_service_unit(
             if let Some(cmd) = cmd {
                 process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                 .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
+                .stdout(Stdio::null())
                 .spawn()
                 .or(Err(UnitLoadError::Failed))?;
             }
@@ -206,6 +207,7 @@ pub fn activate_service_unit_with_socket(
                         Ok(())
                     })
                     .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
+                    .stdout(Stdio::null())
                     .spawn()
                     .or(Err(UnitLoadError::Failed))?;
                 }
