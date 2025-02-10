@@ -153,7 +153,7 @@ pub fn load_unit(name: &str) -> Result<Unit,UnitLoadError> {
 }
 
 pub fn activate_socket_unit(
-    unit: Unit,
+    unit: &Unit,
 ) -> Result<i32, UnitLoadError> {
     let Unit { keyvalues, .. } = unit;
     if keyvalues.contains_key("ListenStream") && keyvalues["ListenStream"].starts_with("/") {
@@ -179,10 +179,10 @@ pub fn activate_service_unit(
         for exec_start in keyvalues["ExecStart"].lines() {
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
-                let _ = process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
+                process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                 .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
                 .spawn()
-                .or(Err(UnitLoadError::Failed));
+                .or(Err(UnitLoadError::Failed))?;
             }
         }
     }
@@ -199,7 +199,7 @@ pub fn activate_service_unit_with_socket(
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 unsafe {
-                    let _ = process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
+                    process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                     .pre_exec(move || {
                         std::env::set_var("LISTEN_PID", process::id().to_string());
                         std::env::set_var("LISTEN_FDS", fd.to_string());
@@ -207,7 +207,7 @@ pub fn activate_service_unit_with_socket(
                     })
                     .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
                     .spawn()
-                    .or(Err(UnitLoadError::Failed));
+                    .or(Err(UnitLoadError::Failed))?;
                 }
             }
         }
@@ -298,12 +298,13 @@ pub fn activate_unit(
         UnitSuffix::Socket => {
             if unit.keyvalues.contains_key("Service") {
                 checked_units.insert(unit.keyvalues["Service"].to_owned());
-                activate_service_unit_with_socket(load_unit(unit.keyvalues["Service"].as_str())?, activate_socket_unit(unit)?)?;
+                activate_service_unit_with_socket(load_unit(unit.keyvalues["Service"].as_str())?, activate_socket_unit(&unit)?)?;
+                success_units.insert(unit.keyvalues["Service"].to_owned());
             } else {
                 let mut service_unit_name = name.strip_suffix(".socket").unwrap().to_string();
                 service_unit_name.push_str(".service");
-                checked_units.insert(service_unit_name.to_owned());
-                activate_service_unit_with_socket(load_unit(service_unit_name.as_str())?, activate_socket_unit(unit)?)?;
+                activate_service_unit_with_socket(load_unit(service_unit_name.as_str())?, activate_socket_unit(&unit)?)?;
+                success_units.insert(service_unit_name.to_owned());
             }
         }
         UnitSuffix::Unknown => {},
