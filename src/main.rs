@@ -17,6 +17,7 @@ fn main() {
     println!("Welcome!");
     let mut checked_units = BTreeSet::new();
     let _ = activate_unit("default.target", &mut checked_units);
+    println!("Startup complete!");
     unsafe {
         block_signals();
         loop {

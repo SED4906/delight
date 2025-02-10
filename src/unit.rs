@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::io::Write;
 use std::os::fd::AsRawFd;
+use std::os::unix::net::UnixDatagram;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process;
@@ -152,12 +153,18 @@ pub fn load_unit(name: &str) -> Result<Unit,UnitLoadError> {
 
 pub fn activate_socket_unit(
     unit: Unit,
-) -> Result<UnixListener, UnitLoadError> {
+) -> Result<i32, UnitLoadError> {
     let Unit { keyvalues, .. } = unit;
     if keyvalues.contains_key("ListenStream") && keyvalues["ListenStream"].starts_with("/") {
         if let Some(dir_path) = Path::new(keyvalues["ListenStream"].clone().as_str()).parent() {
             std::fs::create_dir_all(dir_path).or(Err(UnitLoadError::Failed))?;
-            return Ok(UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(UnitLoadError::Failed))?);
+            return Ok(UnixListener::bind(keyvalues["ListenStream"].clone().as_str()).or(Err(UnitLoadError::Failed))?.as_raw_fd());
+        }
+    }
+    if keyvalues.contains_key("ListenDatagram") && keyvalues["ListenDatagram"].starts_with("/") {
+        if let Some(dir_path) = Path::new(keyvalues["ListenDatagram"].clone().as_str()).parent() {
+            std::fs::create_dir_all(dir_path).or(Err(UnitLoadError::Failed))?;
+            return Ok(UnixDatagram::bind(keyvalues["ListenDatagram"].clone().as_str()).or(Err(UnitLoadError::Failed))?.as_raw_fd());
         }
     }
     Err(UnitLoadError::Failed)
@@ -183,7 +190,7 @@ pub fn activate_service_unit(
 
 pub fn activate_service_unit_with_socket(
     unit: Unit,
-    fd: UnixListener
+    fd: i32
 ) -> Result<(), UnitLoadError> {
     let Unit { keyvalues, .. } = unit;
     if keyvalues.contains_key("ExecStart") {
@@ -194,7 +201,7 @@ pub fn activate_service_unit_with_socket(
                     process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                     .pre_exec(move || {
                         std::env::set_var("LISTEN_PID", process::id().to_string());
-                        std::env::set_var("LISTEN_FDS", fd.as_raw_fd().to_string());
+                        std::env::set_var("LISTEN_FDS", fd.to_string());
                         Ok(())
                     })
                     .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
