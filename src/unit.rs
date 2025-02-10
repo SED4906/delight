@@ -15,7 +15,7 @@ enum UnitSuffix {
     Unknown,
 }
 
-const UNIT_PATHS: &[&str] = &["/etc/systemd/system","/usr/lib/systemd/system/"];
+const UNIT_PATHS: &[&str] = &["/etc/systemd/system/","/usr/lib/systemd/system/"];
 
 fn read_unit(name: &str) -> Result<String, UnitLoadError> {
     for unit_path in UNIT_PATHS {
