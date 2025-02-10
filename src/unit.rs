@@ -286,16 +286,20 @@ pub fn activate_unit(
         UnitSuffix::Service => {
             let mut socket_unit_name = name.strip_suffix(".service").unwrap().to_string();
             socket_unit_name.push_str(".socket");
-            match load_unit(socket_unit_name.as_str()) {
-                Ok(socket_result) => {
-                    checked_units.insert(socket_unit_name);
-                    let fd = activate_socket_unit(socket_result)?;
-                    activate_service_unit_with_socket(unit, fd)?;
+            if checked_units.contains(socket_unit_name.as_str()) {
+                match load_unit(socket_unit_name.as_str()) {
+                    Ok(socket_result) => {
+                        checked_units.insert(socket_unit_name);
+                        let fd = activate_socket_unit(socket_result)?;
+                        activate_service_unit_with_socket(unit, fd)?;
+                    }
+                    Err(UnitLoadError::DoesNotExist) => {
+                        activate_service_unit(unit)?;
+                    }
+                    _ => {return Err(UnitLoadError::Failed)}
                 }
-                Err(UnitLoadError::DoesNotExist) => {
-                    activate_service_unit(unit)?;
-                }
-                _ => {return Err(UnitLoadError::Failed)}
+            } else {
+                activate_service_unit(unit)?;
             }
         }
         UnitSuffix::Mount => {
