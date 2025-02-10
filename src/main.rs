@@ -15,7 +15,6 @@ fn main() {
     }
     set_current_dir(Path::new("/")).expect("Couldn't change directory to /");
     println!("Welcome!");
-    let _ = process::Command::new("findmnt").spawn();
     let mut checked_units = BTreeSet::new();
     let _ = activate_unit("default.target", &mut checked_units);
     unsafe {

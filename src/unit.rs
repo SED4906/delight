@@ -263,6 +263,11 @@ pub fn activate_unit(
             let _ = activate_unit(wants_unit, checked_units);
         }
     }
+    if unit.keyvalues.contains_key("After") {
+        for after_unit in unit.keyvalues["After"].split_whitespace() {
+            let _ = activate_unit(after_unit, checked_units);
+        }
+    }
     match unit.suffix {
         UnitSuffix::Target => {
             if let Ok(wanted_by_result) = load_units_wanted_by(name) {
