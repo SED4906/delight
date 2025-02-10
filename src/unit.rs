@@ -4,7 +4,7 @@ use std::os::fd::AsRawFd;
 use std::os::unix::net::UnixDatagram;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
-use std::process::{self, Stdio};
+use std::process;
 use std::{collections::BTreeMap, os::unix::net::UnixListener, path::PathBuf};
 
 enum UnitSuffix {
@@ -179,11 +179,10 @@ pub fn activate_service_unit(
         for exec_start in keyvalues["ExecStart"].lines() {
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
-                process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
+                let _ = process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                 .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
-                .stdout(Stdio::null())
                 .spawn()
-                .or(Err(UnitLoadError::Failed))?;
+                .or(Err(UnitLoadError::Failed));
             }
         }
     }
@@ -200,16 +199,15 @@ pub fn activate_service_unit_with_socket(
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 unsafe {
-                    process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
+                    let _ = process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                     .pre_exec(move || {
                         std::env::set_var("LISTEN_PID", process::id().to_string());
                         std::env::set_var("LISTEN_FDS", fd.to_string());
                         Ok(())
                     })
                     .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
-                    .stdout(Stdio::null())
                     .spawn()
-                    .or(Err(UnitLoadError::Failed))?;
+                    .or(Err(UnitLoadError::Failed));
                 }
             }
         }
