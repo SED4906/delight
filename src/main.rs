@@ -3,7 +3,7 @@ mod unit;
 use std::{collections::BTreeSet, env::set_current_dir, mem::zeroed, path::Path, process, ptr::null_mut};
 
 use libc::{alarm, c_uint, sigfillset, sigprocmask, sigset_t, sigwait, waitpid, SIGALRM, SIGCHLD, SIG_BLOCK, WNOHANG};
-use unit::load_unit;
+use unit::activate_unit;
 
 const TIMEOUT: c_uint = 30;
 
@@ -19,8 +19,8 @@ fn main() {
     let _ = process::Command::new("mount").args(&["-t","proc","-o","rw,nosuid,nodev,noexec,relatime","proc", "/proc"]).spawn();
     let _ = process::Command::new("mount").args(&["-t","devtmpfs","-o","rw,nosuid,relatime,size=50%,mode=755,nr_inodes=2m,inode64","dev", "/dev"]).spawn();
     let _ = process::Command::new("mount").args(&["-t","sysfs","-o","rw,nosuid,nodev,noexec,relatime","sys", "/sys"]).spawn();
-    let mut active_units = BTreeSet::new();
-    let _ = load_unit("default.target", &mut active_units, false);
+    let mut checked_units = BTreeSet::new();
+    let _ = activate_unit("default.target", &mut checked_units);
     unsafe {
         block_signals();
         loop {
