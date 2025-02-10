@@ -17,7 +17,8 @@ fn main() {
     println!("Welcome!");
     let mut checked_units = BTreeSet::new();
     let _ = activate_unit("default.target", &mut checked_units);
-    println!("Startup complete!");
+    let _ = activate_unit("getty@tty2.service", &mut checked_units);
+    let _ = process::Command::new("chvt").arg("2").spawn();
     unsafe {
         block_signals();
         loop {
