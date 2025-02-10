@@ -257,7 +257,7 @@ pub fn activate_unit(
         return Ok(());
     }
     checked_units.insert(name.to_owned());
-    println!("{name}");
+    println!("[->] {name}");
     let _ = std::io::stdout().flush();
     let unit = load_unit(name)?;
 
@@ -313,5 +313,6 @@ pub fn activate_unit(
         }
         UnitSuffix::Unknown => {},
     }
+    println!("[OK] {name}");
     Ok(())
 }
