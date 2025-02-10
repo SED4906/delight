@@ -179,6 +179,7 @@ pub fn activate_service_unit(
         for exec_start in keyvalues["ExecStart"].lines() {
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
+                println!("[^^] {exec_start}");
                 process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                 .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
                 .spawn()
@@ -199,6 +200,7 @@ pub fn activate_service_unit_with_socket(
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
                 unsafe {
+                    println!("[^^] {exec_start}");
                     process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                     .pre_exec(move || {
                         std::env::set_var("LISTEN_PID", process::id().to_string());
