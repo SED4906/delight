@@ -16,7 +16,8 @@ fn main() {
     set_current_dir(Path::new("/")).expect("Couldn't change directory to /");
     println!("Welcome!");
     let mut checked_units = BTreeSet::new();
-    let _ = activate_unit("default.target", &mut checked_units);
+    let mut success_units = BTreeSet::new();
+    let _ = activate_unit("default.target", &mut checked_units, &mut success_units);
     unsafe {
         block_signals();
         loop {

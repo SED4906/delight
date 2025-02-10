@@ -251,7 +251,8 @@ pub fn activate_mount_unit(unit: Unit) -> Result<(), UnitLoadError> {
 
 pub fn activate_unit(
     name: &str,
-    checked_units: &mut BTreeSet<String>
+    checked_units: &mut BTreeSet<String>,
+    success_units: &mut BTreeSet<String>
 ) -> Result<(), UnitLoadError> {
     if checked_units.contains(name) {
         return Ok(());
@@ -261,26 +262,26 @@ pub fn activate_unit(
     let _ = std::io::stdout().flush();
     let unit = load_unit(name)?;
 
+    if unit.keyvalues.contains_key("After") {
+        for after_unit in unit.keyvalues["After"].split_whitespace() {
+            let _ = activate_unit(after_unit, checked_units, success_units);
+        }
+    }
     if unit.keyvalues.contains_key("Requires") {
         for requires_unit in unit.keyvalues["Requires"].split_whitespace() {
-            activate_unit(requires_unit, checked_units)?;
+            activate_unit(requires_unit, checked_units, success_units)?;
         }
     }
     if unit.keyvalues.contains_key("Wants") {
         for wants_unit in unit.keyvalues["Wants"].split_whitespace() {
-            let _ = activate_unit(wants_unit, checked_units);
-        }
-    }
-    if unit.keyvalues.contains_key("After") {
-        for after_unit in unit.keyvalues["After"].split_whitespace() {
-            let _ = activate_unit(after_unit, checked_units);
+            let _ = activate_unit(wants_unit, checked_units, success_units);
         }
     }
     match unit.suffix {
         UnitSuffix::Target => {
             if let Ok(wanted_by_result) = load_units_wanted_by(name) {
                 for wanted_by_unit in wanted_by_result {
-                    let _ = activate_unit(wanted_by_unit.as_str(), checked_units);
+                    let _ = activate_unit(wanted_by_unit.as_str(), checked_units, success_units);
                 }
             }
         }
@@ -304,5 +305,6 @@ pub fn activate_unit(
         UnitSuffix::Unknown => {},
     }
     println!("[OK] {name}");
+    success_units.insert(name.to_owned());
     Ok(())
 }
