@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::io::Write;
 use std::os::fd::AsRawFd;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
@@ -249,6 +250,7 @@ pub fn activate_unit(
     }
     checked_units.insert(name.to_owned());
     print!("{name} ");
+    let _ = std::io::stdout().flush();
     let unit = load_unit(name)?;
 
     if unit.keyvalues.contains_key("Requires") {
@@ -265,7 +267,7 @@ pub fn activate_unit(
         UnitSuffix::Target => {
             if let Ok(wanted_by_result) = load_units_wanted_by(name) {
                 for wanted_by_unit in wanted_by_result {
-                    let _ = activate_unit(wanted_by_unit.as_str(), checked_units)?;
+                    let _ = activate_unit(wanted_by_unit.as_str(), checked_units);
                 }
             }
         }
