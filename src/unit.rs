@@ -12,6 +12,7 @@ enum UnitSuffix {
     Service,
     Mount,
     Socket,
+    Unknown,
 }
 
 const UNIT_PATHS: &[&str] = &["/etc/systemd/system","/usr/lib/systemd/system/"];
@@ -97,7 +98,7 @@ fn get_unit_suffix(name: &str) -> Result<UnitSuffix, UnitLoadError> {
     } else if name.ends_with(".socket") {
         Ok(UnitSuffix::Socket)
     } else {
-        Err(UnitLoadError::Failed)
+        Ok(UnitSuffix::Unknown)
     }
 }
 
@@ -310,6 +311,7 @@ pub fn activate_unit(
             service_unit_name.push_str(".service");
             activate_unit(service_unit_name.as_str(), checked_units)?;
         }
+        UnitSuffix::Unknown => {},
     }
     Ok(())
 }
