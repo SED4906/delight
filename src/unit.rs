@@ -285,34 +285,20 @@ pub fn activate_unit(
             }
         }
         UnitSuffix::Service => {
-            let mut socket_unit_name = name.strip_suffix(".service").unwrap().to_string();
-            socket_unit_name.push_str(".socket");
-            if checked_units.contains(socket_unit_name.as_str()) {
-                match load_unit(socket_unit_name.as_str()) {
-                    Ok(socket_result) => {
-                        checked_units.insert(socket_unit_name);
-                        let fd = activate_socket_unit(socket_result)?;
-                        activate_service_unit_with_socket(unit, fd)?;
-                    }
-                    Err(UnitLoadError::DoesNotExist) => {
-                        activate_service_unit(unit)?;
-                    }
-                    _ => {return Err(UnitLoadError::Failed)}
-                }
-            } else {
-                activate_service_unit(unit)?;
-            }
+            activate_service_unit(unit)?;
         }
         UnitSuffix::Mount => {
             activate_mount_unit(unit)?;
         }
         UnitSuffix::Socket => {
             if unit.keyvalues.contains_key("Service") {
-                activate_unit(unit.keyvalues["Service"].as_str(), checked_units)?;
+                checked_units.insert(unit.keyvalues["Service"].to_owned());
+                activate_service_unit_with_socket(load_unit(unit.keyvalues["Service"].as_str())?, activate_socket_unit(unit)?)?;
             } else {
                 let mut service_unit_name = name.strip_suffix(".socket").unwrap().to_string();
                 service_unit_name.push_str(".service");
-                activate_unit(service_unit_name.as_str(), checked_units)?;
+                checked_units.insert(service_unit_name.to_owned());
+                activate_service_unit_with_socket(load_unit(service_unit_name.as_str())?, activate_socket_unit(unit)?)?;
             }
         }
         UnitSuffix::Unknown => {},
