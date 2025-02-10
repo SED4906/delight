@@ -15,10 +15,7 @@ fn main() {
     }
     set_current_dir(Path::new("/")).expect("Couldn't change directory to /");
     println!("Welcome!");
-    let _ = process::Command::new("mount").args(&["-t","tmpfs","-o","rw,nosuid,relatime,mode=755,inode64","tmpfs", "/run"]).spawn();
-    let _ = process::Command::new("mount").args(&["-t","proc","-o","rw,nosuid,nodev,noexec,relatime","proc", "/proc"]).spawn();
-    let _ = process::Command::new("mount").args(&["-t","devtmpfs","-o","rw,nosuid,relatime,size=50%,mode=755,nr_inodes=2m,inode64","dev", "/dev"]).spawn();
-    let _ = process::Command::new("mount").args(&["-t","sysfs","-o","rw,nosuid,nodev,noexec,relatime","sys", "/sys"]).spawn();
+    let _ = process::Command::new("findmnt").spawn();
     let mut checked_units = BTreeSet::new();
     let _ = activate_unit("default.target", &mut checked_units);
     unsafe {

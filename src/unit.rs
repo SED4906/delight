@@ -12,7 +12,7 @@ enum UnitSuffix {
     Socket,
 }
 
-const UNIT_PATHS: &[&str] = &["/usr/lib/delight/system/", "/usr/lib/systemd/system/"];
+const UNIT_PATHS: &[&str] = &["/usr/lib/systemd/system/"];
 
 fn read_unit(name: &str) -> Result<String, UnitLoadError> {
     for unit_path in UNIT_PATHS {
