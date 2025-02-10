@@ -304,7 +304,7 @@ pub fn activate_unit(
         UnitSuffix::Socket => {
             let mut service_unit_name = name.strip_suffix(".socket").unwrap().to_string();
             service_unit_name.push_str(".service");
-            activate_unit(service_unit_name.as_str(), checked_units)?;
+            let _ = activate_unit(service_unit_name.as_str(), checked_units);
         }
     }
     Ok(())
