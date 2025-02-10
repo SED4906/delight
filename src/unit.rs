@@ -13,7 +13,7 @@ enum UnitSuffix {
     Socket,
 }
 
-const UNIT_PATHS: &[&str] = &["/usr/lib/systemd/system/"];
+const UNIT_PATHS: &[&str] = &["/etc/systemd/system","/usr/lib/systemd/system/"];
 
 fn read_unit(name: &str) -> Result<String, UnitLoadError> {
     for unit_path in UNIT_PATHS {
@@ -249,7 +249,7 @@ pub fn activate_unit(
         return Ok(());
     }
     checked_units.insert(name.to_owned());
-    print!("{name} ");
+    println!("{name}");
     let _ = std::io::stdout().flush();
     let unit = load_unit(name)?;
 
