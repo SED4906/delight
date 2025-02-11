@@ -201,6 +201,7 @@ pub fn activate_service_unit_with_socket(
             if let Some(cmd) = cmd {
                 if cmd == "/usr/lib/systemd/systemd-journald" {return Ok(());}
                 if cmd == "/usr/lib/systemd/systemd-udevd" {return Ok(());}
+                if cmd == "-udevadm" {return Ok(());}
                 unsafe {
                     println!("[^^] {exec_start}");
                     process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
