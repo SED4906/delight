@@ -179,8 +179,6 @@ pub fn activate_service_unit(
         for exec_start in keyvalues["ExecStart"].lines() {
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
-                if cmd == "/usr/lib/systemd/systemd-journald" {return Ok(());}
-                if cmd == "/usr/lib/systemd/systemd-udevd" {return Ok(());}
                 println!("[^^] {exec_start}");
                 process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
                 .args(exec_start.split_whitespace().skip(1).collect::<Vec<&str>>())
@@ -201,6 +199,8 @@ pub fn activate_service_unit_with_socket(
         if let Some(exec_start) = keyvalues["ExecStart"].lines().next() {
             let cmd = exec_start.split_whitespace().next();
             if let Some(cmd) = cmd {
+                if cmd == "/usr/lib/systemd/systemd-journald" {return Ok(());}
+                if cmd == "/usr/lib/systemd/systemd-udevd" {return Ok(());}
                 unsafe {
                     println!("[^^] {exec_start}");
                     process::Command::new(cmd.strip_prefix("-").unwrap_or(cmd))
