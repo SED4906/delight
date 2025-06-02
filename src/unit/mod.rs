@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fmt::Display, path::PathBuf};
+use std::{collections::BTreeMap, fmt::{Display, Write}, path::PathBuf};
 
 mod activation;
 mod parser;
@@ -54,20 +54,23 @@ impl Display for Unit {
         f.write_str(" REQUIRES ")?;
         for dep in self.requires.clone() {
             f.write_str(dep.as_str())?;
+            f.write_char(' ')?;
         }
-        f.write_str(" WANTS ")?;
+        f.write_str("WANTS ")?;
         for dep in self.wants.clone() {
             f.write_str(dep.as_str())?;
+            f.write_char(' ')?;
         }
-        f.write_str(" AFTER ")?;
+        f.write_str("AFTER ")?;
         for dep in self.after.clone() {
             f.write_str(dep.as_str())?;
+            f.write_char(' ')?;
         }
-        f.write_str(" BEFORE ")?;
+        f.write_str("BEFORE ")?;
         for dep in self.before.clone() {
             f.write_str(dep.as_str())?;
+            f.write_char(' ')?;
         }
-        f.write_str("\n")?;
         Ok(())
     }
 }

@@ -59,7 +59,6 @@ fn check_path(node: String) -> Option<UnitName> {
             }
         };
         unit_file.push(name.clone());
-        println!("checking {unit_file:?}");
         if std::fs::exists(&unit_file).ok().is_none_or(|p| !p) {
             continue;
         }
