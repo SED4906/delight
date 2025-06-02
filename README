@@ -1,4 +1,4 @@
-Delight (drop-in reimplementation of part of systemd)
+Delight (a small reimplementation of part of systemd)
 
 Delight is intended for low-RAM systems.  Development
 started because Wii Linux[1] is based on ArchPOWER so
