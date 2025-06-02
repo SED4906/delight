@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{Unit, UnitInfo, UnitName};
+use super::{Unit, UnitInfo, UnitName, UnitType};
 
 const UNIT_PATHS: &[&str] = &["/etc/systemd/system/","/usr/lib/systemd/system/"];
 
@@ -9,19 +9,30 @@ pub fn walk(node: String) -> Vec<Unit> {
     let mut order = vec![];
     if let Some(name) = check_path(node) {
         if let Ok(info) = name.info() {
-            let requires = info.requires();
+            let requires = info.depend("Requires");
+            let wants = info.depend("Wants");
+            let mut after = info.depend("After");
+            let before = info.depend("Before");
             for subnode in requires.clone().into_iter() {
                 queue.append(&mut walk(subnode));
             }
-            let wants = info.wants();
             for subnode in wants.clone().into_iter() {
                 queue.append(&mut walk(subnode));
+            }
+            match info.unit_type {
+                UnitType::Target => {
+                    after.append(&mut wants.clone());
+                    after.append(&mut requires.clone());
+                }
+                _ => {}
             }
             queue.push(Unit {
                 name,
                 info,
                 requires,
                 wants,
+                after,
+                before,
             });
         }
     }
@@ -58,27 +69,15 @@ fn check_path(node: String) -> Option<UnitName> {
 }
 
 impl UnitInfo {
-    pub fn requires(&self) -> Vec<String> {
-        let mut requires = vec![];
-        if let Some(lines) = self.unit.get("Requires") {
+    pub fn depend(&self, key: &str) -> Vec<String> {
+        let mut depend = vec![];
+        if let Some(lines) = self.unit.get(key) {
             for line in lines {
                 for name in line.split_whitespace() {
-                    requires.push(name.into());
+                    depend.push(name.into());
                 }
             }
         }
-        requires
-    }
-
-    pub fn wants(&self) -> Vec<String> {
-        let mut wants = vec![];
-        if let Some(lines) = self.unit.get("Wants") {
-            for line in lines {
-                for name in line.split_whitespace() {
-                    wants.push(name.into());
-                }
-            }
-        }
-        wants
+        depend
     }
 }

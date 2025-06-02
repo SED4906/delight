@@ -16,7 +16,7 @@ fn main() {
     println!("Welcome!");
     block_signals();
     for resulting_unit in unit::walk("default.target".into()) {
-        println!("{resulting_unit:?}");
+        println!("{resulting_unit}");
     }
     loop {
         handle_signals();
