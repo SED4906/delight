@@ -32,21 +32,24 @@ pub fn walk(node: String) -> Vec<Unit> {
 }
 
 fn check_path(node: String) -> Option<UnitName> {
-    let unit_file = PathBuf::new();
     for unit_path in UNIT_PATHS {
-        let mut path: PathBuf = unit_path.into();
+        let mut unit_file: PathBuf = unit_path.into();
         let (name, template) = {
             match node.rsplit_once("@") {
                 Some((name, template)) => {
                     let mut name: String = name.into();
                     name.push('@');
+                    let (template,suffix) = template.rsplit_once(".")?;
+                    name.push('.');
+                    name.push_str(suffix);
                     (name,template.into())
                 }
                 None => (node.clone(), String::new())
             }
         };
-        path.push(name.clone());
-        if !std::fs::exists(path).ok()? {
+        unit_file.push(name.clone());
+        println!("checking {unit_file:?}");
+        if std::fs::exists(&unit_file).ok().is_none_or(|p| !p) {
             continue;
         }
         return Some(UnitName { unit_file, name, template });
