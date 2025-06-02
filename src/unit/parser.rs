@@ -20,8 +20,8 @@ impl UnitName {
     pub fn info(&self) -> Result<UnitInfo, Box<dyn Error>> {
         let unit_file_contents = std::fs::read_to_string(self.unit_file.as_path())?;
         let unit_type = self.unit_type().ok_or(UnitParseError::UnknownType)?;
-        let sections =
-            UnitInfo::parse(unit_file_contents.as_str(), &self).ok_or(UnitParseError::ProbableParserBug)?;
+        let sections = UnitInfo::parse(unit_file_contents.as_str(), &self)
+            .ok_or(UnitParseError::ProbableParserBug)?;
         let unit = sections
             .get("Unit")
             .unwrap_or(&BTreeMap::<String, Vec<String>>::new())
@@ -126,12 +126,18 @@ impl UnitInfo {
             Some((key, value)) => {
                 let key = key.trim();
                 let value = Self::apply_template(value.trim(), &unit_name);
-                if value.is_empty() {
+                if value.is_empty()
+                    || !sections
+                        .get_mut(current_section_name)
+                        .unwrap()
+                        .contains_key(key)
+                {
                     sections
                         .get_mut(current_section_name)
                         .unwrap()
                         .insert(key.into(), vec![]);
-                } else {
+                }
+                if !value.is_empty() {
                     sections
                         .get_mut(current_section_name)
                         .unwrap()
