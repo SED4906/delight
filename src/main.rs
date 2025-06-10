@@ -16,10 +16,17 @@ fn main() {
     println!("Welcome!");
     block_signals();
     let mut units = unit::walk("default.target".into());
-    unit::depends_sort(&mut units);
-    for unit in units {
+    println!("Before sort:");
+    for unit in &units {
         print!("{} ", unit.plain_name());
     }
+    println!();
+    println!("After sort:");
+    unit::depends_sort(&mut units);
+    for unit in &units {
+        print!("{} ", unit.plain_name());
+    }
+    println!();
     loop {
         handle_signals();
     }
