@@ -79,15 +79,14 @@ impl UnitInfo {
             let line = line.trim();
             match line.chars().next() {
                 Some('#' | ';') => {}
-                Some('[') => {
-                    if !line_continuation && line.ends_with(']') {
+                Some('[') if !line_continuation => {
+                    if line.ends_with(']') {
                         current_section_name = line.strip_prefix("[")?.strip_suffix("]")?.into();
                         working_line = String::new();
                         if !sections.contains_key(&current_section_name) {
                             sections.insert(current_section_name.clone(), BTreeMap::new());
                         }
                     }
-                    line_continuation = false;
                 }
                 Some(_) => {
                     if line.ends_with("\\") {

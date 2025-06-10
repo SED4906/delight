@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{cmp::Ordering, path::PathBuf};
 
 use super::{Unit, UnitInfo, UnitName, UnitType};
 
@@ -6,7 +6,6 @@ const UNIT_PATHS: &[&str] = &["/etc/systemd/system/","/usr/lib/systemd/system/"]
 
 pub fn walk(node: String) -> Vec<Unit> {
     let mut queue = vec![];
-    let mut order = vec![];
     if let Some(name) = check_path(node) {
         if let Ok(info) = name.info() {
             let requires = info.depend("Requires");
@@ -36,10 +35,28 @@ pub fn walk(node: String) -> Vec<Unit> {
             });
         }
     }
-    for subunit in queue {
-        order.push(subunit);
-    }
-    order
+    queue
+}
+
+pub fn depends_sort(queue: &mut Vec<Unit>) {
+    queue.sort_by(|a,b| {
+        if a.after.contains(&b.name.name) {
+            Ordering::Greater
+        } else if b.after.contains(&a.name.name) {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    });
+    queue.sort_by(|a,b| {
+        if a.before.contains(&b.name.name) {
+            Ordering::Less
+        } else if b.before.contains(&a.name.name) {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    });
 }
 
 fn check_path(node: String) -> Option<UnitName> {

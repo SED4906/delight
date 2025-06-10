@@ -3,6 +3,8 @@ use std::{collections::BTreeMap, fmt::{Display, Write}, path::PathBuf};
 mod activation;
 mod parser;
 
+pub use activation::{walk,depends_sort};
+
 #[derive(Debug)]
 pub struct UnitName {
     unit_file: PathBuf,
@@ -45,8 +47,6 @@ pub struct Unit {
 
 pub type Section = BTreeMap<String, Vec<String>>;
 
-pub use activation::walk;
-
 impl Display for Unit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("  Unit: ")?;
@@ -72,5 +72,11 @@ impl Display for Unit {
             f.write_char(' ')?;
         }
         Ok(())
+    }
+}
+
+impl Unit {
+    pub fn plain_name(&self) -> &str {
+        self.name.name.as_str()
     }
 }

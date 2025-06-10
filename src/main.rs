@@ -15,8 +15,10 @@ fn main() {
     set_current_dir(Path::new("/")).expect("Couldn't change directory to /");
     println!("Welcome!");
     block_signals();
-    for resulting_unit in unit::walk("default.target".into()) {
-        println!("{resulting_unit}");
+    let mut units = unit::walk("default.target".into());
+    unit::depends_sort(&mut units);
+    for unit in units {
+        print!("{} ", unit.plain_name());
     }
     loop {
         handle_signals();
