@@ -1,6 +1,6 @@
 mod unit;
 
-use std::{env::set_current_dir, mem::zeroed, path::Path, process, ptr::null_mut};
+use std::{collections::BTreeSet, env::set_current_dir, mem::zeroed, path::Path, process, ptr::null_mut};
 
 use libc::{alarm, c_uint, sigfillset, sigprocmask, sigset_t, sigwait, waitpid, SIGALRM, SIGCHLD, SIG_BLOCK, WNOHANG};
 
@@ -15,7 +15,8 @@ fn main() {
     set_current_dir(Path::new("/")).expect("Couldn't change directory to /");
     println!("Welcome!");
     block_signals();
-    let mut units = unit::walk("default.target".into());
+    let mut checked = BTreeSet::new();
+    let mut units = unit::walk("default.target".into(), &mut checked);
     println!("Before sort:");
     for unit in &units {
         print!("{} ", unit.plain_name());

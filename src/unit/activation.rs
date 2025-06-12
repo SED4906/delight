@@ -1,13 +1,17 @@
-use std::{cmp::Ordering, path::PathBuf};
+use std::{cmp::Ordering, collections::BTreeSet, path::PathBuf};
 
 use super::{Unit, UnitInfo, UnitName, UnitType};
 
 const UNIT_PATHS: &[&str] = &["/etc/systemd/system/","/usr/lib/systemd/system/"];
 
-pub fn walk(node: String) -> Vec<Unit> {
+pub fn walk(node: String, checked: &mut BTreeSet<String>) -> Vec<Unit> {
     let mut queue = vec![];
     if let Some(name) = check_path(node.clone()) {
         if let Ok(info) = name.info() {
+            if checked.contains(&name.name) {
+                return vec![];
+            }
+            checked.insert(name.name.clone());
             let requires = info.depend("Requires");
             let mut wants = info.depend("Wants");
             let mut after = info.depend("After");
@@ -22,10 +26,10 @@ pub fn walk(node: String) -> Vec<Unit> {
                 _ => {}
             }
             for subnode in requires.clone().into_iter() {
-                queue.append(&mut walk(subnode));
+                queue.append(&mut walk(subnode, checked));
             }
             for subnode in wants.clone().into_iter() {
-                queue.append(&mut walk(subnode));
+                queue.append(&mut walk(subnode, checked));
             }
             match info.unit_type {
                 UnitType::Target => {
