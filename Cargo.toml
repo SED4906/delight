@@ -1,13 +1,9 @@
-[package]
-name = "delight"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-libc = "0.2"
+[workspace]
+resolver = "3"
+members = ["init", "unit"]
 
 [profile.release]
 opt-level = "s"
-strip = true
 lto = true
-panic = 'abort'
+strip = true
+panic = "abort"
