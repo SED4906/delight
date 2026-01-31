@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
-use crate::{Unit, UnitType, SYSTEM_UNIT_PATHS};
+use crate::{SYSTEM_UNIT_PATHS, Unit, UnitType};
 
 pub fn load_unit(units: &mut BTreeMap<String, Unit>, name: &str) -> Option<bool> {
     if !units.contains_key(name) {
@@ -51,11 +51,11 @@ fn load_unit_ini(name: &str) -> Option<String> {
         override_path.push(&name_d);
         if let Ok(in_dir) = fs::read_dir(override_path) {
             for file in in_dir {
-                if let Ok(file) = file {
-                    if let Ok(input) = fs::read_to_string(file.path()) {
-                        result.as_mut()?.push('\n');
-                        result.as_mut()?.push_str(&input);
-                    }
+                if let Ok(file) = file
+                    && let Ok(input) = fs::read_to_string(file.path())
+                {
+                    result.as_mut()?.push('\n');
+                    result.as_mut()?.push_str(&input);
                 }
             }
         }

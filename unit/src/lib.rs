@@ -1,11 +1,11 @@
-mod parser;
 mod load;
+mod parser;
 mod traverse;
 
 const SYSTEM_UNIT_PATHS: &[&str] = &[
     "/etc/systemd/system/",
-"/usr/local/lib/systemd/system/",
-"/usr/lib/systemd/system/",
+    "/usr/local/lib/systemd/system/",
+    "/usr/lib/systemd/system/",
 ];
 
 use std::sync::Arc;
@@ -13,7 +13,7 @@ use std::sync::Arc;
 pub use load::load_unit;
 pub use traverse::traverse_unit;
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct Unit {
     // Section
     section: Section,
@@ -28,7 +28,7 @@ pub struct Unit {
     required_by: Vec<String>,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub enum Section {
     Service {
         exec: Exec,
@@ -67,7 +67,7 @@ pub enum Section {
     Scope,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub enum UnitType {
     Service,
     Mount,
@@ -82,7 +82,7 @@ pub enum UnitType {
     Scope,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct Exec {
     exec_search_path: Option<Vec<String>>,
     working_directory: Option<String>,
@@ -90,7 +90,7 @@ pub struct Exec {
     group: Option<String>,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct Job {
     unit: Arc<Unit>,
     template: String,
