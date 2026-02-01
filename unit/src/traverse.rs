@@ -30,15 +30,16 @@ fn traverse_extra_directories(units: &mut BTreeMap<String, Unit>, name: &str) {
         let mut name_wants = name.to_string();
         name_wants.push_str(".wants");
         wants_path.push(&name_wants);
-        if let Ok(in_dir) = fs::read_dir(wants_path) {
-            for file in in_dir {
-                if let Ok(file) = file
-                    && let Ok(file) = fs::read_link(file.path())
-                    && let Some(file_name) = file.file_name()
-                    && let Some(file_name) = file_name.to_str()
-                {
-                    load_unit(units, file_name);
-                }
+        let Ok(dir) = fs::read_dir(wants_path) else {
+            continue;
+        };
+        for file in dir {
+            if let Ok(file) = file
+                && let Ok(file) = fs::read_link(file.path())
+                && let Some(file_name) = file.file_name()
+                && let Some(file_name) = file_name.to_str()
+            {
+                load_unit(units, file_name);
             }
         }
     }
