@@ -46,28 +46,15 @@ fn stitch_unit(name: &str) -> Option<String> {
             break;
         }
     }
-    let _ = result.as_ref()?; // return early if None
+    let unit_type = name.rsplit_once(".")?.1;
+    result.as_mut()?.push_str(&stitch_dropin(unit_type)?);
+    result.as_mut()?.push_str(&stitch_dropin(name)?);
+    result
+}
+
+fn stitch_dropin(name: &str) -> Option<String> {
+    let mut result = String::new();
     for system_unit_path in SYSTEM_UNIT_PATHS {
-        // drop-in files for all units of a given type
-        let mut override_path = PathBuf::new();
-        override_path.push(system_unit_path);
-        let mut unit_d = name.rsplit_once(".")?.1.to_string();
-        unit_d.push_str(".d");
-        override_path.push(&unit_d);
-        let Ok(dir) = fs::read_dir(override_path) else {
-            continue;
-        };
-        for file in dir {
-            if let Ok(file) = file
-                && let Ok(input) = fs::read_to_string(file.path())
-                {
-                    result.as_mut()?.push('\n');
-                    result.as_mut()?.push_str(&input);
-                }
-        }
-    }
-    for system_unit_path in SYSTEM_UNIT_PATHS {
-        // drop-in files for this unit
         let mut override_path = PathBuf::new();
         override_path.push(system_unit_path);
         let mut name_d = name.to_string();
@@ -80,10 +67,10 @@ fn stitch_unit(name: &str) -> Option<String> {
             if let Ok(file) = file
                 && let Ok(input) = fs::read_to_string(file.path())
             {
-                result.as_mut()?.push('\n');
-                result.as_mut()?.push_str(&input);
+                result.push('\n');
+                result.push_str(&input);
             }
         }
     }
-    result
+    Some(result)
 }

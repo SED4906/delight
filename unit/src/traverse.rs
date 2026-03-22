@@ -20,10 +20,10 @@ pub fn traverse_unit(units: &mut BTreeMap<String, Unit>, name: &str) {
             _ => continue,
         }
     }
-    traverse_extra_directories(units, name);
+    traverse_unit_extra_wants(units, name);
 }
 
-fn traverse_extra_directories(units: &mut BTreeMap<String, Unit>, name: &str) {
+fn traverse_unit_extra_wants(units: &mut BTreeMap<String, Unit>, name: &str) {
     for system_unit_path in SYSTEM_UNIT_PATHS {
         let mut wants_path = PathBuf::new();
         wants_path.push(system_unit_path);

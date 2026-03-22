@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, env::set_current_dir, path::Path, process};
 use nix::{libc::{SIGALRM, SIGCHLD}, sys::{signal::{sigprocmask, SigSet, SigmaskHow}, signalfd::SignalFd, wait::{waitpid, WaitPidFlag}}, unistd::{alarm, Pid}};
-use unit::Unit;
+use unit::{Unit, activate_unit};
 
 const TIMEOUT: u32 = 30;
 
@@ -20,6 +20,10 @@ fn main() {
     unit::traverse_unit(&mut units, "default.target");
 
     println!("{units:#?}");
+
+    for (name,_unit) in &units {
+        let _ = activate_unit(&units, &name, "");
+    }
 
     loop {
         match signal_fd.read_signal() {

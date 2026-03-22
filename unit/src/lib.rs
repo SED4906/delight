@@ -1,6 +1,7 @@
 mod load;
 mod parser;
 mod traverse;
+mod activate;
 
 const SYSTEM_UNIT_PATHS: &[&str] = &[
     "/etc/systemd/system/",
@@ -8,10 +9,9 @@ const SYSTEM_UNIT_PATHS: &[&str] = &[
     "/usr/lib/systemd/system/",
 ];
 
-use std::sync::Arc;
-
 pub use load::load_unit;
 pub use traverse::traverse_unit;
+pub use activate::activate_unit;
 
 #[derive(Clone, Debug)]
 pub struct Unit {
@@ -88,10 +88,4 @@ pub struct Exec {
     working_directory: Option<String>,
     user: Option<String>,
     group: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-pub struct Job {
-    unit: Arc<Unit>,
-    template: String,
 }
