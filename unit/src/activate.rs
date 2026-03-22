@@ -9,7 +9,7 @@ pub fn activate_unit(units: &BTreeMap<String, Unit>, name: &str, template: &str)
             Command::new(&exec_start[0]).args(&exec_start[1..]).spawn().ok()?;
         }
         crate::Section::Mount { exec, what, r#where, r#type, options } => {
-            Command::new("mount").args(options).arg("-t").arg(r#type).arg(what).arg(r#where).spawn().ok()?;
+            Command::new("mount").arg("-o").arg(options.join(",")).arg("-t").arg(r#type).arg(what).arg(r#where).spawn().ok()?;
         },
         _ => println!("{name} activation not implemented"),
     }
