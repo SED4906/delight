@@ -80,6 +80,14 @@ macro_rules! parse_exec {
     };
 }
 
+fn boolean(input: String) -> bool {
+    match input.to_lowercase().as_str() {
+        "off" | "no" | "false" => false,
+        "on" | "yes" | "true" => true,
+        _ => false
+    }
+}
+
 impl Unit {
     pub fn new(input: &str, unit_type: UnitType) -> Option<Self> {
         let ini = Ini::parse(input)?;
@@ -97,6 +105,7 @@ impl Unit {
                 options: ini
                     .get_delimited("Mount", "Options", ",")
                     .unwrap_or_default(),
+                sloppy_options: boolean(ini.get_1("Mount", "SloppyOptions").unwrap_or("off".into())),
             },
             UnitType::Swap => Section::Swap {
                 exec: parse_exec!(ini, "Swap"),

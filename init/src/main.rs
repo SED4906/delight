@@ -21,9 +21,7 @@ fn main() {
 
     println!("{units:#?}");
 
-    for (name,_unit) in &units {
-        let _ = activate_unit(&units, &name, "");
-    }
+    let _ = activate_unit(&units, "default.target", "");
 
     loop {
         match signal_fd.read_signal() {

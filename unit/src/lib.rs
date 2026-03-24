@@ -41,6 +41,7 @@ pub enum Section {
         r#where: String,
         r#type: String,
         options: Vec<String>,
+        sloppy_options: bool,
     },
     Swap {
         exec: Exec,
