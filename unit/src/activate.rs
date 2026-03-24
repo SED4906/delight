@@ -75,6 +75,7 @@ pub fn activate_unit(units: &BTreeMap<String, Unit>, name: &str, instance: &str)
                 .spawn()
                 .ok()?;
         }
+        crate::Section::Target => {}
         _ => {
             println!("{name} activation not implemented");
             return None;
