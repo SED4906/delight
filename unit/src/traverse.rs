@@ -40,6 +40,7 @@ fn traverse_unit_extra_wants(units: &mut BTreeMap<String, Unit>, name: &str) {
                 && let Some(file_name) = file_name.to_str()
             {
                 load_unit(units, file_name);
+                units.get_mut(name).unwrap().wants.push(file_name.to_string());
             }
         }
     }
