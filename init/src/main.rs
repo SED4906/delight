@@ -1,6 +1,6 @@
-use std::{collections::BTreeMap, env::set_current_dir, path::Path, process};
+use std::{env::set_current_dir, path::Path, process};
 use nix::{libc::{SIGALRM, SIGCHLD}, sys::{signal::{sigprocmask, SigSet, SigmaskHow}, signalfd::SignalFd, wait::{waitpid, WaitPidFlag}}, unistd::{alarm, Pid}};
-use unit::{Unit, activate_unit};
+use unit::activate_unit;
 
 const TIMEOUT: u32 = 30;
 
@@ -15,13 +15,10 @@ fn main() {
     let _ = alarm::set(TIMEOUT);
     let signal_fd = SignalFd::new(&SigSet::all()).expect("Couldn't create descriptor for reading signals");
 
-    let mut units = BTreeMap::new();
-    unit::load_unit(&mut units, "default.target").expect("failed to load unit");
-    unit::traverse_unit(&mut units, "default.target");
+    unit::load_unit("default.target").expect("Couldn't load default.target");
+    unit::traverse_unit("default.target");
 
-    println!("{units:#?}");
-
-    let _ = activate_unit(&units, "default.target", "");
+    let _ = activate_unit("default.target", "");
 
     loop {
         match signal_fd.read_signal() {

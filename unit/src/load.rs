@@ -1,8 +1,9 @@
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-use crate::{SYSTEM_UNIT_PATHS, Unit, UnitType};
+use crate::{SYSTEM_UNIT_PATHS, Unit, UnitKind, state::UNITS};
 
-pub fn load_unit(units: &mut BTreeMap<String, Unit>, name: &str) -> Option<bool> {
+pub fn load_unit(name: &str) -> Option<bool> {
+    let mut units = UNITS.lock().unwrap();
     if !units.contains_key(name) {
         units.insert(
             name.into(),
@@ -14,7 +15,7 @@ pub fn load_unit(units: &mut BTreeMap<String, Unit>, name: &str) -> Option<bool>
     }
 }
 
-impl TryFrom<&str> for UnitType {
+impl TryFrom<&str> for UnitKind {
     type Error = ();
 
     fn try_from(name: &str) -> Result<Self, ()> {

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Exec, Section, Unit, UnitType};
+use crate::{Exec, Section, Unit, UnitKind};
 
 pub struct Ini(BTreeMap<String, BTreeMap<String, Vec<String>>>);
 
@@ -82,22 +82,22 @@ macro_rules! parse_exec {
 
 fn boolean(input: String) -> bool {
     match input.to_lowercase().as_str() {
-        "off" | "no" | "false" => false,
-        "on" | "yes" | "true" => true,
+        "off" | "no" | "false" | "0" => false,
+        "on" | "yes" | "true" | "1" => true,
         _ => false
     }
 }
 
 impl Unit {
-    pub fn new(input: &str, unit_type: UnitType) -> Option<Self> {
+    pub fn new(input: &str, unit_type: UnitKind) -> Option<Self> {
         let ini = Ini::parse(input)?;
         let section = match unit_type {
-            UnitType::Service => Section::Service {
+            UnitKind::Service => Section::Service {
                 exec: parse_exec!(ini, "Service"),
                 exec_start: ini.get("Service", "ExecStart").unwrap_or_default(),
                 exec_stop: ini.get("Service", "ExecStop").unwrap_or_default(),
             },
-            UnitType::Mount => Section::Mount {
+            UnitKind::Mount => Section::Mount {
                 exec: parse_exec!(ini, "Mount"),
                 what: ini.get_1("Mount", "What")?,
                 r#where: ini.get_1("Mount", "Where")?,
@@ -107,33 +107,34 @@ impl Unit {
                     .unwrap_or_default(),
                 sloppy_options: boolean(ini.get_1("Mount", "SloppyOptions").unwrap_or("off".into())),
             },
-            UnitType::Swap => Section::Swap {
+            UnitKind::Swap => Section::Swap {
                 exec: parse_exec!(ini, "Swap"),
                 what: ini.get_1("Swap", "What")?,
+                priority: ini.get_1("Swap", "Priority"),
                 options: ini
                     .get_delimited("Swap", "Options", ",")
                     .unwrap_or_default(),
             },
-            UnitType::Socket => Section::Socket {
+            UnitKind::Socket => Section::Socket {
                 exec: parse_exec!(ini, "Socket"),
                 service: ini.get_1("Socket", "Service"),
             },
-            UnitType::Target => Section::Target,
-            UnitType::Device => Section::Device,
-            UnitType::Automount => Section::Automount {
+            UnitKind::Target => Section::Target,
+            UnitKind::Device => Section::Device,
+            UnitKind::Automount => Section::Automount {
                 r#where: ini.get_1("Automount", "Where")?,
                 extra_options: ini
                     .get_delimited("Automount", "ExtraOptions", ",")
                     .unwrap_or_default(),
             },
-            UnitType::Timer => Section::Timer {
+            UnitKind::Timer => Section::Timer {
                 unit: ini.get_1("Timer", "Unit"),
             },
-            UnitType::Path => Section::Path {
+            UnitKind::Path => Section::Path {
                 unit: ini.get_1("Path", "Unit"),
             },
-            UnitType::Slice => Section::Slice,
-            UnitType::Scope => Section::Scope,
+            UnitKind::Slice => Section::Slice,
+            UnitKind::Scope => Section::Scope,
         };
 
         let requires = ini

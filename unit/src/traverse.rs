@@ -1,29 +1,29 @@
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-use crate::{SYSTEM_UNIT_PATHS, Unit, load_unit};
+use crate::{SYSTEM_UNIT_PATHS, load_unit, state::UNITS};
 
-pub fn traverse_unit(units: &mut BTreeMap<String, Unit>, name: &str) {
-    let unit = units[name].clone();
+pub fn traverse_unit(name: &str) {
+    let unit = UNITS.lock().unwrap()[name].clone();
     for required in &unit.requires {
-        match crate::load_unit(units, required) {
+        match crate::load_unit(required) {
             Some(true) => {
-                traverse_unit(units, required);
+                traverse_unit(required);
             }
             _ => continue,
         }
     }
     for wanted in &unit.wants {
-        match crate::load_unit(units, wanted) {
+        match crate::load_unit(wanted) {
             Some(true) => {
-                traverse_unit(units, wanted);
+                traverse_unit(wanted);
             }
             _ => continue,
         }
     }
-    traverse_unit_extra_wants(units, name);
+    traverse_unit_extra_wants(name);
 }
 
-fn traverse_unit_extra_wants(units: &mut BTreeMap<String, Unit>, name: &str) {
+fn traverse_unit_extra_wants(name: &str) {
     for system_unit_path in SYSTEM_UNIT_PATHS {
         let mut wants_path = PathBuf::new();
         wants_path.push(system_unit_path);
@@ -39,8 +39,8 @@ fn traverse_unit_extra_wants(units: &mut BTreeMap<String, Unit>, name: &str) {
                 && let Some(file_name) = file.file_name()
                 && let Some(file_name) = file_name.to_str()
             {
-                load_unit(units, file_name);
-                units.get_mut(name).unwrap().wants.push(file_name.to_string());
+                load_unit(file_name);
+                UNITS.lock().unwrap().get_mut(name).unwrap().wants.push(file_name.to_string());
             }
         }
     }
